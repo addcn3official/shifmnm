@@ -1177,7 +1177,7 @@
         "<td>" + statusPillHtml(r.status) + "</td>" +
         "<td>" + esc(r.recordedBy) + "</td>" +
         '<td><div class="row-actions">' +
-          '<select data-action="status" data-id="' + r.id + '">' + statusOptions + "</select>" +
+          '<select data-action="status" data-id="' + r.id + '" data-prev="' + esc(r.status) + '">' + statusOptions + "</select>" +
           '<button type="button" data-action="delete" data-id="' + r.id + '" title="ลบรายการ" aria-label="ลบรายการ">' +
             '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
           "</button>" +
@@ -1191,8 +1191,18 @@
       var sel = e.target.closest('select[data-action="status"]');
       if (!sel) return;
       var id = sel.getAttribute("data-id");
-      var res = await saveAction("updateRecordStatus", { id: id, status: sel.value });
+      var prevStatus = sel.getAttribute("data-prev") || "";
+      var newStatus = sel.value;
+      if (newStatus === prevStatus) return;
+      var prevLabel = (STATUS_MAP[prevStatus] && STATUS_MAP[prevStatus].label) || prevStatus;
+      var newLabel = (STATUS_MAP[newStatus] && STATUS_MAP[newStatus].label) || newStatus;
+      if (!window.confirm('เปลี่ยนสถานะจาก "' + prevLabel + '" เป็น "' + newLabel + '" ใช่หรือไม่?')) {
+        sel.value = prevStatus;
+        return;
+      }
+      var res = await saveAction("updateRecordStatus", { id: id, status: newStatus });
       if (res.ok) { showToast("อัปเดตสถานะแล้ว", "success"); renderOverview(); }
+      else { sel.value = prevStatus; }
     });
 
     $("tableBody").addEventListener("click", async function (e) {
