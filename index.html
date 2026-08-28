@@ -451,6 +451,12 @@
   .timeline-title { font-size: 0.86rem; font-weight: 600; margin: 2px 0 3px; }
   .timeline-detail { font-size: 0.78rem; color: var(--ink-secondary); }
   .timeline-empty { color: var(--ink-muted); font-size: 0.82rem; padding: 6px 0; }
+  .timeline-grid.stacked-days { grid-template-columns: 1fr; gap: 22px; }
+  .timeline-day-group + .timeline-day-group { padding-top: 18px; border-top: 1px dashed var(--border); }
+  .timeline-day-heading {
+    font-family: "Kanit"; font-weight: 600; font-size: 0.9rem; color: var(--ink);
+    margin-bottom: 10px;
+  }
 
   /* ไทม์ไลน์ตามกะ: การ์ดบล็อกสีพาสเทลตามสถานะ จัดเป็น 2 คอลัมน์ต่อกะ */
   .shift-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
@@ -688,8 +694,12 @@
     <div class="card">
       <div class="filter-bar">
         <div class="filter-field">
-          <label for="fltDate">วันที่</label>
-          <input type="date" id="fltDate" />
+          <label for="fltDateFrom">วันที่ (จาก)</label>
+          <input type="date" id="fltDateFrom" />
+        </div>
+        <div class="filter-field">
+          <label for="fltDateTo">ถึง</label>
+          <input type="date" id="fltDateTo" />
         </div>
         <div class="filter-field">
           <label for="fltShift">กะ</label>
@@ -1196,12 +1206,14 @@
 
   /* ---------------- overview: stat tiles ---------------- */
   function getFilteredRecords() {
-    var date = $("fltDate").value;
+    var dateFrom = $("fltDateFrom").value;
+    var dateTo = $("fltDateTo").value;
     var shift = $("fltShift").value;
     var status = $("fltStatus").value;
     var q = ($("fltSearch").value || "").trim().toLowerCase();
     return state.records.filter(function (r) {
-      if (date && r.date !== date) return false;
+      if (dateFrom && r.date < dateFrom) return false;
+      if (dateTo && r.date > dateTo) return false;
       if (shift !== "all" && String(r.shift) !== shift) return false;
       if (status !== "all" && r.status !== status) return false;
       if (q) {
@@ -1233,25 +1245,54 @@
 
   /* ---------------- overview: timeline ---------------- */
   function renderTimeline(records) {
-    var dateFilter = $("fltDate").value || todayStr();
-    var todays = records.filter(function (r) { return r.date === dateFilter; });
-    var html = SHIFT_DEFS.map(function (s) {
-      var items = todays.filter(function (r) { return Number(r.shift) === s.key; })
-        .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
-      var body = items.length ? '<div class="shift-card-grid">' + items.map(function (r) {
-        var label = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
-        return '<div class="shift-card" data-status="' + esc(r.status) + '" data-id="' + r.id + '">' +
-          '<div class="shift-card-time tabular">' + fmtTime(r.createdAt) + "</div>" +
-          '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
-          (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
-          '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(label) + "</div>" +
-          "</div>";
-      }).join("") + "</div>" : '<div class="timeline-empty">ไม่มีรายการในกะนี้</div>';
-      return '<div><div class="timeline-col-head">' + s.label + '<span class="time-range">' + s.range + "</span></div>" +
-        body + "</div>";
-    }).join("");
-    $("timelineGrid").innerHTML = html;
-    $("timelineSub").textContent = "วันที่ " + fmtDateThai(dateFilter) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
+    var dateFrom = $("fltDateFrom").value;
+    var dateTo = $("fltDateTo").value;
+    var hasRangeFilter = !!(dateFrom || dateTo);
+    var today = todayStr();
+    var timelineGridEl = $("timelineGrid");
+
+    function shiftColumnsHtml(dateVal) {
+      var todays = records.filter(function (r) { return r.date === dateVal; });
+      return SHIFT_DEFS.map(function (s) {
+        var items = todays.filter(function (r) { return Number(r.shift) === s.key; })
+          .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
+        var body = items.length ? '<div class="shift-card-grid">' + items.map(function (r) {
+          var label = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
+          return '<div class="shift-card" data-status="' + esc(r.status) + '" data-id="' + r.id + '">' +
+            '<div class="shift-card-time tabular">' + fmtTime(r.createdAt) + "</div>" +
+            '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
+            (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
+            '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(label) + "</div>" +
+            "</div>";
+        }).join("") + "</div>" : '<div class="timeline-empty">ไม่มีรายการในกะนี้</div>';
+        return '<div><div class="timeline-col-head">' + s.label + '<span class="time-range">' + s.range + "</span></div>" +
+          body + "</div>";
+      }).join("");
+    }
+
+    if (!hasRangeFilter) {
+      // ไม่ได้เลือกช่วงวันที่ — แสดงเฉพาะของวันนี้เหมือนเดิม
+      timelineGridEl.classList.remove("stacked-days");
+      timelineGridEl.innerHTML = shiftColumnsHtml(today);
+      $("timelineSub").textContent = "วันที่ " + fmtDateThai(today) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
+      return;
+    }
+
+    // เลือกช่วงวันที่ไว้ — แสดงทีละวันที่มีข้อมูล เรียงจากเก่าไปใหม่
+    var seen = {};
+    records.forEach(function (r) { seen[r.date] = true; });
+    var dates = Object.keys(seen).sort();
+
+    timelineGridEl.classList.add("stacked-days");
+    timelineGridEl.innerHTML = dates.length ? dates.map(function (d) {
+      return '<div class="timeline-day-group">' +
+        '<div class="timeline-day-heading">' + fmtDateThai(d) + "</div>" +
+        '<div class="timeline-grid">' + shiftColumnsHtml(d) + "</div>" +
+        "</div>";
+    }).join("") : '<div class="timeline-empty">ไม่มีรายการในช่วงวันที่ที่เลือก</div>';
+
+    var rangeLabel = (dateFrom ? fmtDateThai(dateFrom) : "เริ่มต้น") + " – " + (dateTo ? fmtDateThai(dateTo) : "ปัจจุบัน");
+    $("timelineSub").textContent = "ช่วงวันที่ " + rangeLabel + (dates.length ? " (" + dates.length + " วันที่มีข้อมูล)" : "") + " — คลิกการ์ดเพื่อดู/ปรับสถานะ";
   }
 
   function bindTimelineActions() {
@@ -1608,12 +1649,13 @@
       if (btn) removeCircuit(btn.getAttribute("data-code"));
     });
 
-    ["fltDate", "fltShift", "fltStatus", "fltSearch"].forEach(function (id) {
+    ["fltDateFrom", "fltDateTo", "fltShift", "fltStatus", "fltSearch"].forEach(function (id) {
       $(id).addEventListener("input", renderOverview);
       $(id).addEventListener("change", renderOverview);
     });
     $("clearFilterBtn").addEventListener("click", function () {
-      $("fltDate").value = todayStr();
+      $("fltDateFrom").value = "";
+      $("fltDateTo").value = "";
       $("fltShift").value = "all";
       $("fltStatus").value = "all";
       $("fltSearch").value = "";
@@ -1625,7 +1667,6 @@
 
   async function init() {
     $("fDate").value = todayStr();
-    $("fltDate").value = todayStr();
     state.selectedShift = currentShiftKey();
     var savedRecorder = localPrefGet("shiftlog_recorder", "");
     if (savedRecorder) $("fRecorder").value = savedRecorder;
