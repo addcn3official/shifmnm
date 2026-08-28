@@ -643,7 +643,7 @@
             <label for="fStation">สถานี <span class="req">*</span></label>
             <div class="field-row">
               <select id="fStation" required></select>
-              <button type="button" class="icon-btn" id="manageStationBtn" title="จัดการรายการสถานี" aria-label="จัดการรายการสถานี">
+              <button type="button" class="icon-btn hidden" id="manageStationBtn" title="จัดการรายการสถานี" aria-label="จัดการรายการสถานี">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
               </button>
             </div>
@@ -652,7 +652,7 @@
             <label for="fCircuit">วงจร <span class="req">*</span></label>
             <div class="field-row">
               <select id="fCircuit" required></select>
-              <button type="button" class="icon-btn" id="manageCircuitBtn" title="จัดการรายการวงจร" aria-label="จัดการรายการวงจร">
+              <button type="button" class="icon-btn hidden" id="manageCircuitBtn" title="จัดการรายการวงจร" aria-label="จัดการรายการวงจร">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
               </button>
             </div>
@@ -1154,7 +1154,7 @@
       var label = c.voltage ? c.name + " (" + c.voltage + " kV)" : c.name;
       return '<option value="' + esc(c.name) + '">' + esc(label) + "</option>";
     });
-    renderSelectOptions($("fCircuit"), opts, matches.length ? "เลือกวงจร" : "ไม่มีวงจรของสถานีนี้ — เพิ่มได้จากปุ่มจัดการรายการ");
+    renderSelectOptions($("fCircuit"), opts, matches.length ? "เลือกวงจร" : "ไม่มีวงจรของสถานีนี้");
   }
 
   /* ---------------- clock / live shift badge ---------------- */
