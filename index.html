@@ -452,6 +452,34 @@
   .timeline-detail { font-size: 0.78rem; color: var(--ink-secondary); }
   .timeline-empty { color: var(--ink-muted); font-size: 0.82rem; padding: 6px 0; }
 
+  /* ไทม์ไลน์ตามกะ: การ์ดบล็อกสีพาสเทลตามสถานะ จัดเป็น 2 คอลัมน์ต่อกะ */
+  .shift-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+  .shift-card {
+    border-radius: var(--radius-md);
+    padding: 10px 11px;
+    cursor: pointer;
+    display: flex; flex-direction: column; gap: 3px;
+    border-left: 3px solid transparent;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .shift-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .shift-card-time { font-family: "Kanit"; font-size: 0.68rem; font-weight: 600; color: var(--ink-muted); }
+  .shift-card-title { font-size: 0.81rem; font-weight: 600; color: var(--ink); line-height: 1.25; }
+  .shift-card-detail {
+    font-size: 0.72rem; color: var(--ink-secondary); line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .shift-card-status-label { font-size: 0.67rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .shift-card-status-label svg { width: 11px; height: 11px; flex: none; }
+  .shift-card[data-status="moving_out"] { background: var(--status-moving-out-soft); border-left-color: var(--status-moving-out); }
+  .shift-card[data-status="moving_out"] .shift-card-status-label { color: var(--status-moving-out); }
+  .shift-card[data-status="active"] { background: var(--status-active-soft); border-left-color: var(--status-active); }
+  .shift-card[data-status="active"] .shift-card-status-label { color: var(--status-active); }
+  .shift-card[data-status="moving_back"] { background: var(--status-moving-back-soft); border-left-color: var(--status-moving-back); }
+  .shift-card[data-status="moving_back"] .shift-card-status-label { color: var(--status-moving-back); }
+  .shift-card[data-status="done"] { background: var(--status-done-soft); border-left-color: var(--status-done); }
+  .shift-card[data-status="done"] .shift-card-status-label { color: var(--status-done); }
+
   /* table */
   .table-wrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); }
   table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 780px; }
@@ -1199,16 +1227,17 @@
     var html = SHIFT_DEFS.map(function (s) {
       var items = todays.filter(function (r) { return Number(r.shift) === s.key; })
         .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
-      var body = items.length ? items.map(function (r) {
-        return '<div class="timeline-node" data-status="' + r.status + '" data-id="' + r.id + '" style="cursor:pointer;">' +
-          '<div class="timeline-time tabular">' + fmtTime(r.createdAt) + "</div>" +
-          '<div class="timeline-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
-          '<div class="timeline-detail">' + esc(truncate(r.detail, 90)) + "</div>" +
-          statusPillHtml(r.status) +
+      var body = items.length ? '<div class="shift-card-grid">' + items.map(function (r) {
+        var label = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
+        return '<div class="shift-card" data-status="' + esc(r.status) + '" data-id="' + r.id + '">' +
+          '<div class="shift-card-time tabular">' + fmtTime(r.createdAt) + "</div>" +
+          '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
+          (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
+          '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(label) + "</div>" +
           "</div>";
-      }).join("") : '<div class="timeline-empty">ไม่มีรายการในกะนี้</div>';
+      }).join("") + "</div>" : '<div class="timeline-empty">ไม่มีรายการในกะนี้</div>';
       return '<div><div class="timeline-col-head">' + s.label + '<span class="time-range">' + s.range + "</span></div>" +
-        '<div class="timeline-track">' + body + "</div></div>";
+        body + "</div>";
     }).join("");
     $("timelineGrid").innerHTML = html;
     $("timelineSub").textContent = "วันที่ " + fmtDateThai(dateFilter) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ";
@@ -1216,7 +1245,7 @@
 
   function bindTimelineActions() {
     $("timelineGrid").addEventListener("click", function (e) {
-      var node = e.target.closest(".timeline-node[data-id]");
+      var node = e.target.closest(".shift-card[data-id]");
       if (node) openRecordLogModal(node.getAttribute("data-id"));
     });
   }
