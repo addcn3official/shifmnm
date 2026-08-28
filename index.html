@@ -297,6 +297,18 @@
   .icon-btn svg { width: 17px; height: 17px; }
 
   .shift-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .voltage-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .voltage-chip {
+    border: 1.5px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-family: "Kanit";
+  }
+  .voltage-chip.selected { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); font-weight: 600; }
+  .voltage-chip.reset-chip { color: var(--ink-muted); }
+  .voltage-chip.reset-chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
   .shift-opt {
     flex: 1 1 120px;
     border: 1.5px solid var(--border-strong);
@@ -552,6 +564,14 @@
             <label for="fRecorder">ผู้บันทึก <span class="req">*</span></label>
             <input type="text" id="fRecorder" placeholder="ชื่อ-นามสกุล หรือรหัสพนักงาน" required />
           </div>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <label>ระดับแรงดัน <span style="font-weight:400;color:var(--ink-muted);">(ตัวกรองช่วยหาสถานี/วงจร เลือกได้หลายค่า ไม่บังคับ)</span></label>
+          <div class="voltage-picker" id="voltagePicker"></div>
+        </div>
+
+        <div class="form-grid two-col" style="margin-top:16px;">
           <div class="field">
             <label for="fStation">สถานี <span class="req">*</span></label>
             <div class="field-row">
@@ -694,6 +714,10 @@
       </div>
       <div id="manageCircuitPane" class="hidden">
         <ul class="manage-list" id="circuitManageList"></ul>
+        <div class="add-row" style="margin-bottom:6px;">
+          <select id="newCircuitStation" style="flex:1;"></select>
+          <input type="text" id="newCircuitVoltage" placeholder="ระดับแรงดัน kV (ถ้ามี)" style="max-width:150px;" />
+        </div>
         <div class="add-row">
           <input type="text" id="newCircuitCode" placeholder="ชื่อวงจร เช่น LB1-7012" />
           <button type="button" class="btn-primary" id="addCircuitBtn" style="padding:8px 14px;">เพิ่ม</button>
@@ -749,6 +773,7 @@
     config: { stations: DEFAULT_STATIONS.slice(), circuits: [] },
     selectedShift: null,
     selectedStatus: "moving_out",
+    selectedVoltages: [],
     view: "entry",
     sort: { key: "date", dir: "desc" },
     manageTab: "station",
@@ -937,9 +962,62 @@
     }
   }
 
+  function distinctVoltages() {
+    var seen = {};
+    var list = [];
+    state.config.circuits.forEach(function (c) {
+      var v = c && c.voltage != null ? String(c.voltage).trim() : "";
+      if (!v || seen[v]) return;
+      seen[v] = true;
+      list.push(v);
+    });
+    list.sort(function (a, b) { return (parseFloat(b) || 0) - (parseFloat(a) || 0); });
+    return list;
+  }
+
+  function renderVoltagePicker() {
+    var el = $("voltagePicker");
+    if (!el) return;
+    var voltages = distinctVoltages();
+    if (!voltages.length) { el.innerHTML = ""; return; }
+    var chips = voltages.map(function (v) {
+      var sel = state.selectedVoltages.indexOf(v) !== -1;
+      return '<button type="button" class="voltage-chip' + (sel ? " selected" : "") + '" data-voltage="' + esc(v) + '">' + esc(v) + " kV</button>";
+    }).join("");
+    var resetSel = state.selectedVoltages.length === 0;
+    el.innerHTML = '<button type="button" class="voltage-chip reset-chip' + (resetSel ? " selected" : "") + '" data-voltage="">ทั้งหมด</button>' + chips;
+    Array.prototype.forEach.call(el.querySelectorAll(".voltage-chip"), function (btn) {
+      btn.addEventListener("click", function () {
+        var v = btn.getAttribute("data-voltage");
+        if (v === "") {
+          state.selectedVoltages = [];
+        } else {
+          var idx = state.selectedVoltages.indexOf(v);
+          if (idx === -1) state.selectedVoltages.push(v); else state.selectedVoltages.splice(idx, 1);
+        }
+        renderVoltagePicker();
+        renderStationOptions();
+        renderCircuitOptions();
+      });
+    });
+  }
+
+  /** สถานีที่มีวงจรตรงกับระดับแรงดันที่เลือกไว้ (ถ้าไม่ได้เลือกเลย = ไม่กรอง แสดงทุกสถานี) */
+  function stationsMatchingVoltage() {
+    if (!state.selectedVoltages.length) return null; // null = no filter
+    var allowed = {};
+    state.config.circuits.forEach(function (c) {
+      var v = c && c.voltage != null ? String(c.voltage).trim() : "";
+      if (v && state.selectedVoltages.indexOf(v) !== -1 && c.station) allowed[c.station] = true;
+    });
+    return allowed;
+  }
+
   function renderStationOptions() {
+    var allowed = stationsMatchingVoltage();
     var byProvince = {};
     state.config.stations.forEach(function (s) {
+      if (allowed && !allowed[s.code]) return;
       var key = s.province || "อื่นๆ";
       (byProvince[key] = byProvince[key] || []).push(s.code);
     });
@@ -952,11 +1030,25 @@
     renderSelectOptions($("fStation"), groups, "เลือกสถานี");
   }
 
+  /** วงจรจะเป็น subset ของสถานีที่เลือกไว้ในฟอร์มเสมอ (+ กรองตามระดับแรงดันถ้าเลือกไว้) */
   function renderCircuitOptions() {
-    var opts = state.config.circuits.slice().sort().map(function (c) {
-      return '<option value="' + esc(c) + '">' + esc(c) + "</option>";
+    var stationCode = $("fStation") ? $("fStation").value : "";
+    if (!stationCode) {
+      $("fCircuit").innerHTML = '<option value="">เลือกสถานีก่อน</option>';
+      return;
+    }
+    var voltages = state.selectedVoltages;
+    var matches = state.config.circuits.filter(function (c) {
+      if (c.station !== stationCode) return false;
+      if (!voltages.length) return true;
+      var v = c.voltage != null ? String(c.voltage).trim() : "";
+      return !v || voltages.indexOf(v) !== -1;
     });
-    renderSelectOptions($("fCircuit"), opts, "เลือกวงจร");
+    var opts = matches.slice().sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }).map(function (c) {
+      var label = c.voltage ? c.name + " (" + c.voltage + " kV)" : c.name;
+      return '<option value="' + esc(c.name) + '">' + esc(label) + "</option>";
+    });
+    renderSelectOptions($("fCircuit"), opts, matches.length ? "เลือกวงจร" : "ไม่มีวงจรของสถานีนี้ — เพิ่มได้จากปุ่มจัดการรายการ");
   }
 
   /* ---------------- clock / live shift badge ---------------- */
@@ -1152,9 +1244,17 @@
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></li>';
     }).join("") || '<li style="justify-content:center;color:var(--ink-muted);">ยังไม่มีรายการ</li>';
 
-    $("circuitManageList").innerHTML = state.config.circuits.slice().sort().map(function (c) {
-      return '<li><span>' + esc(c) + '</span>' +
-        '<button type="button" class="remove" data-code="' + esc(c) + '" aria-label="ลบ ' + esc(c) + '">' +
+    // ตัวเลือกสถานีในฟอร์ม "เพิ่มวงจร" ของโมดัลจัดการ
+    var stationOpts = state.config.stations.map(function (s) {
+      return '<option value="' + esc(s.code) + '">' + esc(s.code) + "</option>";
+    }).join("");
+    $("newCircuitStation").innerHTML = '<option value="">สถานี</option>' + stationOpts;
+
+    var circuitsSorted = state.config.circuits.slice().sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+    $("circuitManageList").innerHTML = circuitsSorted.map(function (c) {
+      var meta = [c.station, c.voltage ? c.voltage + " kV" : ""].filter(Boolean).join(" · ");
+      return '<li><span>' + esc(c.name) + (meta ? ' <span class="province">(' + esc(meta) + ")</span>" : "") + '</span>' +
+        '<button type="button" class="remove" data-code="' + esc(c.name) + '" aria-label="ลบ ' + esc(c.name) + '">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></li>';
     }).join("") || '<li style="justify-content:center;color:var(--ink-muted);">ยังไม่มีรายการ — เพิ่มด้านล่าง</li>';
   }
@@ -1166,30 +1266,33 @@
     var res = await saveAction("addStation", { code: code, province: province });
     if (res.ok) {
       $("newStationCode").value = ""; $("newStationProvince").value = "";
-      renderManageModal(); renderStationOptions();
+      renderManageModal(); renderVoltagePicker(); renderStationOptions();
       showToast("เพิ่มสถานีแล้ว", "success");
     }
   }
 
   async function removeStation(code) {
     var res = await saveAction("removeStation", { code: code });
-    if (res.ok) { renderManageModal(); renderStationOptions(); showToast("ลบแล้ว", "success"); }
+    if (res.ok) { renderManageModal(); renderVoltagePicker(); renderStationOptions(); renderCircuitOptions(); showToast("ลบแล้ว", "success"); }
   }
 
   async function addCircuit() {
-    var code = $("newCircuitCode").value.trim();
-    if (!code) return;
-    var res = await saveAction("addCircuit", { name: code });
+    var station = $("newCircuitStation").value;
+    var voltage = $("newCircuitVoltage").value.trim();
+    var name = $("newCircuitCode").value.trim();
+    if (!station) { showToast("กรุณาเลือกสถานีของวงจรนี้", "error"); return; }
+    if (!name) return;
+    var res = await saveAction("addCircuit", { station: station, voltage: voltage, name: name });
     if (res.ok) {
-      $("newCircuitCode").value = "";
-      renderManageModal(); renderCircuitOptions();
+      $("newCircuitCode").value = ""; $("newCircuitVoltage").value = "";
+      renderManageModal(); renderVoltagePicker(); renderCircuitOptions();
       showToast("เพิ่มวงจรแล้ว", "success");
     }
   }
 
-  async function removeCircuit(code) {
-    var res = await saveAction("removeCircuit", { name: code });
-    if (res.ok) { renderManageModal(); renderCircuitOptions(); showToast("ลบแล้ว", "success"); }
+  async function removeCircuit(name) {
+    var res = await saveAction("removeCircuit", { name: name });
+    if (res.ok) { renderManageModal(); renderVoltagePicker(); renderCircuitOptions(); showToast("ลบแล้ว", "success"); }
   }
 
   /* ---------------- form submit ---------------- */
@@ -1233,7 +1336,7 @@
   function resetForm() {
     $("fDetail").value = "";
     $("fStation").value = "";
-    $("fCircuit").value = "";
+    renderCircuitOptions();
     state.selectedStatus = "moving_out";
     renderStatusPicker();
   }
@@ -1245,6 +1348,7 @@
 
     $("entryForm").addEventListener("submit", handleSubmit);
     $("resetFormBtn").addEventListener("click", resetForm);
+    $("fStation").addEventListener("change", renderCircuitOptions);
 
     $("manageStationBtn").addEventListener("click", function () { openManageModal("station"); });
     $("manageCircuitBtn").addEventListener("click", function () { openManageModal("circuit"); });
@@ -1289,6 +1393,7 @@
 
     renderShiftPicker();
     renderStatusPicker();
+    renderVoltagePicker();
     renderStationOptions();
     renderCircuitOptions();
     renderRecentList();
@@ -1298,6 +1403,7 @@
     setInterval(tickClock, 1000);
 
     await loadData();
+    renderVoltagePicker();
     renderStationOptions();
     renderCircuitOptions();
     renderRecentList();
@@ -1307,6 +1413,7 @@
     setInterval(function () {
       if (document.hidden || state.busy) return;
       loadData(true).then(function () {
+        renderVoltagePicker();
         renderStationOptions();
         renderCircuitOptions();
         renderRecentList();
@@ -1315,7 +1422,7 @@
     }, POLL_INTERVAL_MS);
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) loadData(true).then(function () {
-        renderStationOptions(); renderCircuitOptions(); renderRecentList();
+        renderVoltagePicker(); renderStationOptions(); renderCircuitOptions(); renderRecentList();
         if (state.view === "overview") renderOverview();
       });
     });
