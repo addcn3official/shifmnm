@@ -29,6 +29,10 @@
     --gold-soft: #fbecce;
     --gold-ink: #4a2f05;
 
+    /* สีตราสัญลักษณ์ (โล่+สายฟ้า) — ตรึงค่าคงที่ ไม่สลับตามโหมดสว่าง/มืด กันคอนทราสต์ภายในไอคอนตกในโหมดมืด */
+    --brand-shield: #3d2705;
+    --brand-bolt: #ffedc2;
+
     --status-moving-out: #b6650b;
     --status-moving-out-soft: #fbecd7;
     --status-active: #2455c4;
@@ -176,9 +180,25 @@
     color: var(--gold-ink);
     display: grid; place-items: center;
     flex: none;
+    border: none; padding: 0;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
+  .brand-mark:hover {
+    transform: translateY(-1px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), 0 4px 12px rgba(0,0,0,0.28);
+  }
+  .brand-mark:active { transform: scale(0.93); }
+  .brand-mark:focus-visible { outline: 2px solid rgba(255,255,255,0.75); outline-offset: 2px; }
+  .brand-mark:disabled { cursor: wait; }
   .brand-mark svg { width: 24px; height: 24px; }
+  .brand-mark-shield { fill: var(--brand-shield); }
+  .brand-mark-cut { fill: var(--brand-bolt); }
+  .brand-mark.refreshing svg { animation: brandMarkSpin 0.85s linear infinite; }
+  @keyframes brandMarkSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
   .brand-title { font-size: 1.2rem; letter-spacing: 0.01em; }
   .brand-sub { font-size: 0.78rem; color: rgba(253,250,255,0.75); margin-top: 1px; }
 
@@ -587,9 +607,12 @@
 <div class="app-header">
   <div class="header-row">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="currentColor"/></svg>
-      </div>
+      <button type="button" class="brand-mark" id="brandRefreshBtn" title="รีเฟรชข้อมูล" aria-label="รีเฟรชข้อมูล">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path class="brand-mark-shield" d="M12 2 19 5V10.5C19 15.5 16 19.5 12 22 8 19.5 5 15.5 5 10.5V5L12 2Z"/>
+          <path class="brand-mark-cut" d="M13 6 8 13H11L10 18L16 11H13L13 6Z"/>
+        </svg>
+      </button>
       <div>
         <div class="brand-title">ระบบส่งกะ</div>
         <div class="brand-sub">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
@@ -1004,6 +1027,30 @@
       renderBannerState();
       if (!silent) showToast("โหลดข้อมูลไม่สำเร็จ — ตรวจสอบการเชื่อมต่อ", "error");
     }
+  }
+
+  /** รีเฟรชรายการ dropdown/ลิสต์ต่างๆ ที่ผูกกับ state หลังโหลดข้อมูลใหม่ (ใช้ร่วมกันทั้งตอน init, poll, และกดปุ่มรีเฟรชเอง) */
+  function refreshDerivedLists() {
+    renderVoltagePicker();
+    renderStationOptions();
+    renderCircuitOptions();
+    renderRecentList();
+    if (state.view === "overview") renderOverview();
+  }
+
+  /** กดที่โลโก้มุมซ้ายบนเพื่อรีเฟรชข้อมูลด้วยตัวเอง (นอกเหนือจากการโพลอัตโนมัติทุก 8 วินาที) */
+  async function manualRefresh() {
+    if (state.busy) return;
+    var btn = $("brandRefreshBtn");
+    btn.disabled = true;
+    btn.classList.add("refreshing");
+    var wasOffline = state.offline;
+    await loadData(true);
+    refreshDerivedLists();
+    btn.classList.remove("refreshing");
+    btn.disabled = false;
+    if (!state.offline) showToast("รีเฟรชข้อมูลแล้ว", "success");
+    else if (!wasOffline) showToast("โหลดข้อมูลไม่สำเร็จ — ตรวจสอบการเชื่อมต่อ", "error");
   }
 
   /** ส่ง action ไปบันทึกที่ Google Sheet แล้วอัปเดต state จากผลลัพธ์ล่าสุดที่เซิร์ฟเวอร์ส่งกลับมา */
@@ -1663,6 +1710,8 @@
     });
 
     bindTableActions();
+
+    $("brandRefreshBtn").addEventListener("click", manualRefresh);
   }
 
   async function init() {
