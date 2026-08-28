@@ -536,6 +536,16 @@
   .record-log-note { font-size: 0.76rem; color: var(--ink-muted); margin-top: 12px; }
   #recordLogTrack .timeline-title { font-size: 0.83rem; }
   #recordLogTrack .timeline-detail { font-size: 0.74rem; }
+  .record-log-status-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface-2); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 16px;
+  }
+  .record-log-status-row label { font-size: 0.8rem; font-weight: 600; color: var(--ink-secondary); }
+  .status-change-select {
+    font-family: "Noto Sans Thai", sans-serif; font-size: 0.82rem; font-weight: 600;
+    padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--ink); cursor: pointer;
+  }
 
   /* minimal confirm modal */
   .confirm-modal { max-width: 340px; padding: 26px 22px 20px; text-align: center; }
@@ -794,6 +804,7 @@
     </div>
     <div class="modal-body">
       <div class="record-log-summary" id="recordLogSummary"></div>
+      <div class="record-log-status-row" id="recordLogStatusRow"></div>
       <div class="timeline-track" id="recordLogTrack"></div>
       <div class="record-log-note hidden" id="recordLogNote">ไม่มีประวัติการเปลี่ยนสถานะโดยละเอียดของรายการนี้ (บันทึกไว้ก่อนเปิดใช้งานฟีเจอร์นี้) — แสดงเฉพาะสถานะปัจจุบัน</div>
     </div>
@@ -1240,7 +1251,7 @@
         body + "</div>";
     }).join("");
     $("timelineGrid").innerHTML = html;
-    $("timelineSub").textContent = "วันที่ " + fmtDateThai(dateFilter) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ";
+    $("timelineSub").textContent = "วันที่ " + fmtDateThai(dateFilter) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
   }
 
   function bindTimelineActions() {
@@ -1268,9 +1279,6 @@
     var tbody = $("tableBody");
     $("tableEmpty").classList.toggle("hidden", sorted.length !== 0);
     tbody.innerHTML = sorted.map(function (r) {
-      var statusOptions = STATUS_DEFS.map(function (s) {
-        return '<option value="' + s.key + '"' + (s.key === r.status ? " selected" : "") + ">" + esc(s.label) + "</option>";
-      }).join("");
       return '<tr data-id="' + r.id + '">' +
         '<td><div class="tabular">' + fmtDateThai(r.date) + "</div><div class=\"meta\" style=\"color:var(--ink-muted);font-size:.72rem;\">" + fmtTime(r.createdAt) + "</div></td>" +
         "<td>กะ " + esc(r.shift) + "</td>" +
@@ -1280,7 +1288,6 @@
         "<td>" + statusPillHtml(r.status) + "</td>" +
         "<td>" + esc(r.recordedBy) + "</td>" +
         '<td><div class="row-actions">' +
-          '<select data-action="status" data-id="' + r.id + '" data-prev="' + esc(r.status) + '">' + statusOptions + "</select>" +
           '<button type="button" data-action="delete" data-id="' + r.id + '" title="ลบรายการ" aria-label="ลบรายการ">' +
             '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
           "</button>" +
@@ -1289,26 +1296,30 @@
     }).join("");
   }
 
-  function bindTableActions() {
-    $("tableBody").addEventListener("change", async function (e) {
-      var sel = e.target.closest('select[data-action="status"]');
-      if (!sel) return;
-      var id = sel.getAttribute("data-id");
-      var prevStatus = sel.getAttribute("data-prev") || "";
-      var newStatus = sel.value;
-      if (newStatus === prevStatus) return;
-      var ok = await showConfirmModal({
-        title: "ยืนยันเปลี่ยนสถานะ",
-        statusFrom: prevStatus,
-        statusTo: newStatus,
-        okLabel: "ยืนยันเปลี่ยนสถานะ"
-      });
-      if (!ok) { sel.value = prevStatus; return; }
-      var res = await saveAction("updateRecordStatus", { id: id, status: newStatus });
-      if (res.ok) { showToast("อัปเดตสถานะแล้ว", "success"); renderOverview(); }
-      else { sel.value = prevStatus; }
+  /** ใช้ร่วมกันทั้งจุดที่มี select เปลี่ยนสถานะ (ตอนนี้อยู่ในการ์ดไทม์ไลน์ตามกะ) */
+  async function handleStatusSelectChange(sel, onSuccess) {
+    var id = sel.getAttribute("data-id");
+    var prevStatus = sel.getAttribute("data-prev") || "";
+    var newStatus = sel.value;
+    if (newStatus === prevStatus) return;
+    var ok = await showConfirmModal({
+      title: "ยืนยันเปลี่ยนสถานะ",
+      statusFrom: prevStatus,
+      statusTo: newStatus,
+      okLabel: "ยืนยันเปลี่ยนสถานะ"
     });
+    if (!ok) { sel.value = prevStatus; return; }
+    var res = await saveAction("updateRecordStatus", { id: id, status: newStatus });
+    if (res.ok) {
+      showToast("อัปเดตสถานะแล้ว", "success");
+      renderOverview();
+      if (onSuccess) onSuccess();
+    } else {
+      sel.value = prevStatus;
+    }
+  }
 
+  function bindTableActions() {
     $("tableBody").addEventListener("click", async function (e) {
       var btn = e.target.closest('button[data-action="delete"]');
       if (btn) {
@@ -1361,6 +1372,13 @@
         (r.recordedBy ? "<span>ผู้บันทึก " + esc(r.recordedBy) + "</span>" : "") +
       "</div>" +
       (r.detail ? '<div class="record-log-detail">' + esc(r.detail) + "</div>" : "");
+
+    var statusOptions = STATUS_DEFS.map(function (s) {
+      return '<option value="' + s.key + '"' + (s.key === r.status ? " selected" : "") + ">" + esc(s.label) + "</option>";
+    }).join("");
+    $("recordLogStatusRow").innerHTML =
+      '<label for="recordLogStatusSelect">สถานะปัจจุบัน</label>' +
+      '<select id="recordLogStatusSelect" class="status-change-select" data-action="status" data-id="' + id + '" data-prev="' + esc(r.status) + '">' + statusOptions + "</select>";
 
     var entries = hist.length ? hist : [{ recordId: id, status: r.status, at: r.createdAt }];
     $("recordLogTrack").innerHTML = entries.map(function (e, i) {
@@ -1568,6 +1586,12 @@
     $("manageModal").addEventListener("click", function (e) { if (e.target === $("manageModal")) closeManageModal(); });
     $("closeRecordLogModal").addEventListener("click", closeRecordLogModal);
     $("recordLogModal").addEventListener("click", function (e) { if (e.target === $("recordLogModal")) closeRecordLogModal(); });
+    $("recordLogModal").addEventListener("change", function (e) {
+      var sel = e.target.closest('select[data-action="status"]');
+      if (!sel) return;
+      var id = sel.getAttribute("data-id");
+      handleStatusSelectChange(sel, function () { openRecordLogModal(id); });
+    });
     bindTimelineActions();
     $("manageTabStation").addEventListener("click", function () { state.manageTab = "station"; renderManageModal(); });
     $("manageTabCircuit").addEventListener("click", function () { state.manageTab = "circuit"; renderManageModal(); });
