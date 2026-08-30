@@ -547,7 +547,9 @@
   .shift-card[data-status="done"] .shift-card-status-label { color: var(--status-done); }
 
   /* table */
-  .table-wrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+  /* จำกัดความสูงไว้ที่ประมาณ 12 แถว — เกินกว่านั้นให้เลื่อนดูด้วยสกรอลเม้าส์แทนที่จะดันหน้ายาวลงเรื่อยๆ
+     (หัวตาราง thead th มี position: sticky; top: 0 อยู่แล้ว จึงยังติดอยู่ด้านบนตอนสกรอล) */
+  .table-wrap { overflow-x: auto; overflow-y: auto; max-height: 645px; margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); }
   table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 780px; }
   thead th {
     text-align: left; background: var(--surface-2); color: var(--ink-secondary);
@@ -654,8 +656,8 @@
         </svg>
       </button>
       <div>
-        <div class="brand-title">ระบบส่งกะ</div>
-        <div class="brand-sub">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
+        <div class="brand-title">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
+        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า</div>
       </div>
     </div>
     <div class="clock-badge">
