@@ -343,8 +343,6 @@
     font-family: "Kanit";
   }
   .voltage-chip.selected { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); font-weight: 600; }
-  .voltage-chip.reset-chip { color: var(--ink-muted); }
-  .voltage-chip.reset-chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
   .shift-opt {
     flex: 1 1 120px;
     border: 1.5px solid var(--border-strong);
@@ -1275,17 +1273,12 @@
       var sel = state.selectedVoltages.indexOf(v) !== -1;
       return '<button type="button" class="voltage-chip' + (sel ? " selected" : "") + '" data-voltage="' + esc(v) + '">' + esc(v) + " kV</button>";
     }).join("");
-    var resetSel = state.selectedVoltages.length === 0;
-    el.innerHTML = '<button type="button" class="voltage-chip reset-chip' + (resetSel ? " selected" : "") + '" data-voltage="">ทั้งหมด</button>' + chips;
+    el.innerHTML = chips;
     Array.prototype.forEach.call(el.querySelectorAll(".voltage-chip"), function (btn) {
       btn.addEventListener("click", function () {
         var v = btn.getAttribute("data-voltage");
-        if (v === "") {
-          state.selectedVoltages = [];
-        } else {
-          var idx = state.selectedVoltages.indexOf(v);
-          if (idx === -1) state.selectedVoltages.push(v); else state.selectedVoltages.splice(idx, 1);
-        }
+        var idx = state.selectedVoltages.indexOf(v);
+        if (idx === -1) state.selectedVoltages.push(v); else state.selectedVoltages.splice(idx, 1);
         renderVoltagePicker();
         renderStationOptions();
         renderCircuitOptions();
