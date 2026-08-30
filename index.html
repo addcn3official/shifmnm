@@ -657,7 +657,7 @@
       </button>
       <div>
         <div class="brand-title">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
-        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า</div>
+        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กฟน.3</div>
       </div>
     </div>
     <div class="clock-badge">
@@ -1546,14 +1546,23 @@
   /* ---------------- overview: table ---------------- */
   function sortRecords(records) {
     var key = state.sort.key, dir = state.sort.dir === "asc" ? 1 : -1;
-    return records.slice().sort(function (a, b) {
+    function cmp(a, b) {
       var av, bv;
       if (key === "date") { av = (a.date || "") + (a.createdAt || ""); bv = (b.date || "") + (b.createdAt || ""); }
       else { av = a[key]; bv = b[key]; }
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       return 0;
-    });
+    }
+    if (key === "date") {
+      // เรียงตามเวลาแบบ 2 กลุ่ม: รายการที่ยังไม่ "ย้ายโหลดคืนแล้วเสร็จ" ขึ้นก่อนเสมอ (ย้ำเตือนว่ายังค้างอยู่)
+      // ตามด้วยรายการที่เสร็จแล้ว — แต่ละกลุ่มเรียงตามเวลาเดียวกันภายในกลุ่มตัวเอง (ทิศทางเดียวกับที่เลือกไว้)
+      // พอปรับสถานะเป็น "เสร็จ" แล้ว รายการจะย้ายไปกลุ่มด้านล่างและอยู่ตามตำแหน่งเวลาที่ควรจะเป็นทันที
+      var notDone = records.filter(function (r) { return r.status !== "done"; }).sort(cmp);
+      var done = records.filter(function (r) { return r.status === "done"; }).sort(cmp);
+      return notDone.concat(done);
+    }
+    return records.slice().sort(cmp);
   }
 
   function renderTable(records) {
