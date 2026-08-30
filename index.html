@@ -1100,6 +1100,16 @@
       .sort(function (a, b) { return (a.at || "").localeCompare(b.at || ""); });
   }
 
+  /** entry แรกในประวัติที่สถานะถูกปรับเป็น "เสร็จ" (เรียงเก่า->ใหม่) หรือ null ถ้ายังไม่เคยเสร็จ
+   *  ถ้าไม่มี log ละเอียด (ข้อมูลเก่าก่อนอัปเดต #4) จะ fallback คืน null ให้ผู้เรียกใช้ r.updatedAt แทน */
+  function doneHistoryEntry(id) {
+    var hist = historyForRecord(id);
+    for (var i = 0; i < hist.length; i++) {
+      if (hist[i].status === "done") return hist[i];
+    }
+    return null;
+  }
+
   /** กะเริ่มต้น/สิ้นสุดที่การ์ดไทม์ไลน์ของรายการนี้ควรลากขยายไปถึง (สำหรับวันที่ dateVal ที่กำลังแสดงผล)
    *  - ถ้ายังไม่ถึงสถานะ "ย้ายโหลดคืนแล้วเสร็จ" -> ลากขยายไปถึงกะปัจจุบัน (ถ้าเป็นวันนี้) หรือกะสุดท้ายของวันนั้น (ถ้าเป็นวันที่ผ่านมาแล้ว)
    *  - ถ้าถึงสถานะ "เสร็จ" แล้ว -> หยุดที่กะที่ถูกปรับเป็นเสร็จ (ดูจากประวัติ StatusLog) */
@@ -1441,14 +1451,22 @@
      *  เพื่อให้การ์ดที่ยังไม่ "เสร็จ" ลากขยายคาบเกี่ยวข้ามกะได้ — แทนที่จะแยกเป็น 3 คอลัมน์อิสระเหมือนเดิม */
     /** includeCarryOver = true เฉพาะตอนแสดงหน้า "วันนี้" แบบไม่เลือกช่วงวันที่ — รายการที่ค้างจากวันก่อนหน้า
      *  (date < dateVal) และยังไม่ถึงสถานะ "เสร็จ" จะยังคงแสดงต่อในไทม์ไลน์ของวันนี้ ไม่หายไปตามวันที่เปลี่ยน
-     *  (เดิมการ์ดผูกอยู่กับ "วันที่บันทึก" ของมันเท่านั้น พอวันเปลี่ยนรายการค้างจะหายไปจากหน้าวันนี้ทันที) */
+     *  (เดิมการ์ดผูกอยู่กับ "วันที่บันทึก" ของมันเท่านั้น พอวันเปลี่ยนรายการค้างจะหายไปจากหน้าวันนี้ทันที)
+     *  ถ้าปรับเป็น "เสร็จ" ระหว่างที่กำลังแสดงอยู่ (วันที่ปรับตรงกับ dateVal ที่ดูอยู่) ให้ยังคงแสดงต่อในวันนั้นด้วย
+     *  (ไม่ใช่หายไปจากไทม์ไลน์ทันทีที่กดเสร็จ — จะหายไปก็ต่อเมื่อข้ามไปดูวันถัดๆ ไปแล้วเท่านั้น) */
     function shiftColumnsHtml(dateVal, includeCarryOver) {
       var headers = SHIFT_DEFS.map(function (s) {
         return '<div class="timeline-col-head" data-col="' + s.key + '">' + s.label + '<span class="time-range">' + s.range + "</span></div>";
       }).join("");
       var owned = records.filter(function (r) { return r.date === dateVal; });
       var carried = includeCarryOver
-        ? records.filter(function (r) { return r.date < dateVal && r.status !== "done"; })
+        ? records.filter(function (r) {
+            if (r.date >= dateVal) return false;
+            if (r.status !== "done") return true;
+            var doneEntry = doneHistoryEntry(r.id);
+            var doneDate = (doneEntry ? doneEntry.at : r.updatedAt || "").slice(0, 10);
+            return doneDate === dateVal;
+          })
         : [];
       var todays = owned.concat(carried)
         .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
@@ -1460,8 +1478,15 @@
         var span, shiftLabel;
         if (isCarryOver) {
           // ไม่รู้ว่า "อยู่กะไหนของวันนี้" ตรงๆ (เริ่มมาจากวันก่อนหน้า) เลยลากขยายตั้งแต่กะ 1 ถึงกะปัจจุบันของวันนี้ไปก่อน
+          // ถ้าปรับเป็น "เสร็จ" ระหว่างวันนี้แล้ว ให้หยุดขยายที่กะที่ปรับเป็นเสร็จแทน (เหมือนการ์ดปกติ)
           // และเปลี่ยนป้ายจาก "กะ X-Y" เป็นบอกวันที่ค้างมาแทน ให้รู้ทันทีว่าไม่ใช่รายการของวันนี้
-          span = { start: 1, end: Math.max(1, currentShiftKey()) };
+          var carryEndShift = Math.max(1, currentShiftKey());
+          if (r.status === "done") {
+            var doneEntry2 = doneHistoryEntry(r.id);
+            var doneAt2 = doneEntry2 ? doneEntry2.at : r.updatedAt;
+            if ((doneAt2 || "").slice(0, 10) === dateVal) carryEndShift = Math.max(1, currentShiftKey(new Date(doneAt2)));
+          }
+          span = { start: 1, end: carryEndShift };
           shiftLabel = "ค้างจาก " + fmtDateThai(r.date);
         } else {
           span = shiftSpanForRecord(r);
