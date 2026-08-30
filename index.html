@@ -556,7 +556,6 @@
   tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--surface-2); }
-  tbody tr[data-id] { cursor: pointer; }
   .cell-detail { max-width: 260px; }
   .row-actions { display: flex; gap: 6px; }
   .row-actions select { font-size: 0.78rem; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); }
@@ -600,6 +599,7 @@
   .record-log-note { font-size: 0.76rem; color: var(--ink-muted); margin-top: 12px; }
   #recordLogTrack .timeline-title { font-size: 0.83rem; }
   #recordLogTrack .timeline-detail { font-size: 0.74rem; }
+  .record-log-edit-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 16px; }
   .record-log-status-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     background: var(--surface-2); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 16px;
@@ -889,6 +889,20 @@
     </div>
     <div class="modal-body">
       <div class="record-log-summary" id="recordLogSummary"></div>
+
+      <div class="field" style="margin-top:4px;">
+        <label>ประเภทงาน</label>
+        <div class="jobtype-picker" id="recordLogJobTypePicker" role="radiogroup"></div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label for="recordLogDetailInput">รายละเอียดงาน</label>
+        <textarea id="recordLogDetailInput" rows="3"></textarea>
+      </div>
+      <div class="record-log-edit-actions">
+        <button type="button" class="btn-primary" id="recordLogSaveEditBtn" style="padding:8px 16px;font-size:.82rem;">บันทึกการแก้ไข</button>
+        <span class="save-note" id="recordLogEditNote"></span>
+      </div>
+
       <div class="record-log-status-row" id="recordLogStatusRow"></div>
       <div class="timeline-track" id="recordLogTrack"></div>
       <div class="record-log-note hidden" id="recordLogNote">ไม่มีประวัติการเปลี่ยนสถานะโดยละเอียดของรายการนี้ (บันทึกไว้ก่อนเปิดใช้งานฟีเจอร์นี้) — แสดงเฉพาะสถานะปัจจุบัน</div>
@@ -1559,9 +1573,7 @@
         if (res.ok) { showToast("ลบรายการแล้ว", "success"); renderOverview(); }
         return;
       }
-      if (e.target.closest(".row-actions")) return; // คลิกที่ dropdown/ปุ่มลบ ไม่ต้องเปิด log
-      var tr = e.target.closest("tr[data-id]");
-      if (tr) openRecordLogModal(tr.getAttribute("data-id"));
+      // ตารางนี้ไว้ดูอย่างเดียว — คลิกที่แถวไม่เปิดป๊อปอัปประวัติแล้ว (ใช้คลิกที่การ์ดในไทม์ไลน์ด้านบนแทน)
     });
 
     Array.prototype.forEach.call(document.querySelectorAll("th [data-sort]"), function (btn) {
@@ -1584,6 +1596,39 @@
   }
 
   /* ---------------- record log modal ---------------- */
+  var recordLogEditJobType = "switching";
+
+  /** ตัวเลือกประเภทงานในป๊อปอัปประวัติ — แยกต่างหากจากตัวเลือกในฟอร์มบันทึกใหม่ (#jobTypePicker/state.selectedJobType) โดยตั้งใจ */
+  function renderRecordLogJobTypePicker(current) {
+    recordLogEditJobType = current;
+    var el = $("recordLogJobTypePicker");
+    el.innerHTML = JOB_TYPE_DEFS.map(function (j) {
+      var sel = recordLogEditJobType === j.key;
+      return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '">' +
+        '<svg viewBox="0 0 24 24" fill="none">' + j.icon + "</svg><span>" + esc(j.label) + "</span></button>";
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".jobtype-opt"), function (btn) {
+      btn.addEventListener("click", function () {
+        renderRecordLogJobTypePicker(btn.getAttribute("data-jobtype"));
+      });
+    });
+  }
+
+  /** บันทึกการแก้ไขประเภทงาน/รายละเอียดงานจากป๊อปอัปประวัติ (ไม่ยุ่งกับสถานะ/ประวัติการเปลี่ยนสถานะ) */
+  async function saveRecordLogEdit(id) {
+    var detail = ($("recordLogDetailInput").value || "").trim();
+    if (!detail) { showToast("กรุณากรอกรายละเอียดงาน", "error"); return; }
+    var btn = $("recordLogSaveEditBtn");
+    btn.disabled = true;
+    var res = await saveAction("updateRecordDetails", { id: id, jobType: recordLogEditJobType, detail: detail });
+    btn.disabled = false;
+    if (res.ok) {
+      showToast("บันทึกการแก้ไขแล้ว", "success");
+      refreshDerivedLists();
+      openRecordLogModal(id); // เปิดใหม่เพื่อให้ป๊อปอัปแสดงค่าล่าสุดที่บันทึกไป
+    }
+  }
+
   function openRecordLogModal(id) {
     var r = state.records.filter(function (x) { return x.id === id; })[0];
     if (!r) return;
@@ -1594,9 +1639,12 @@
       '<div class="record-log-meta">' +
         '<span>วันที่ ' + fmtDateThai(r.date) + "</span><span>กะ " + esc(r.shift) + "</span>" +
         (r.recordedBy ? "<span>ผู้บันทึก " + esc(r.recordedBy) + "</span>" : "") +
-      "</div>" +
-      '<div class="record-log-meta" style="margin-top:4px;">' + jobTypePillHtml(r.jobType) + "</div>" +
-      (r.detail ? '<div class="record-log-detail">' + esc(r.detail) + "</div>" : "");
+      "</div>";
+
+    renderRecordLogJobTypePicker(JOB_TYPE_MAP[r.jobType] ? r.jobType : "switching");
+    $("recordLogDetailInput").value = r.detail || "";
+    $("recordLogEditNote").textContent = "";
+    $("recordLogSaveEditBtn").onclick = function () { saveRecordLogEdit(id); };
 
     var statusOptions = STATUS_DEFS.map(function (s) {
       return '<option value="' + s.key + '"' + (s.key === r.status ? " selected" : "") + ">" + esc(s.label) + "</option>";
