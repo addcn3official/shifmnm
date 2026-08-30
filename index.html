@@ -42,6 +42,12 @@
     --status-done: #17842e;
     --status-done-soft: #dff3e2;
 
+    /* สีประเภทงาน (งาน SWITCHING / งานแก้ไขอุปกรณ์) — ใช้แยกจากสีสถานะย่อย เพื่อให้แยกแยะได้ทั้งสองมิติพร้อมกัน */
+    --jobtype-switching: #6d28d9;
+    --jobtype-switching-soft: #ede9fe;
+    --jobtype-repair: #0f7a6b;
+    --jobtype-repair-soft: #dbf3ef;
+
     --shadow-sm: 0 1px 2px rgba(38, 20, 61, 0.06), 0 1px 1px rgba(38, 20, 61, 0.04);
     --shadow-md: 0 8px 24px rgba(38, 20, 61, 0.10), 0 2px 6px rgba(38, 20, 61, 0.06);
     --radius-sm: 8px;
@@ -81,6 +87,11 @@
       --status-done: #67d17e;
       --status-done-soft: #1a3320;
 
+      --jobtype-switching: #b79cf0;
+      --jobtype-switching-soft: #2c2350;
+      --jobtype-repair: #6ce0cf;
+      --jobtype-repair-soft: #163330;
+
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
       --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
     }
@@ -116,6 +127,11 @@
     --status-moving-back-soft: #3d2035;
     --status-done: #67d17e;
     --status-done-soft: #1a3320;
+
+    --jobtype-switching: #b79cf0;
+    --jobtype-switching-soft: #2c2350;
+    --jobtype-repair: #6ce0cf;
+    --jobtype-repair-soft: #163330;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -349,7 +365,7 @@
 
   .status-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   @media (min-width: 560px) { .status-picker { grid-template-columns: repeat(4, 1fr); } }
-  .status-opt {
+  .status-opt, .jobtype-opt {
     border: 1.5px solid var(--border-strong);
     border-radius: var(--radius-md);
     background: var(--surface);
@@ -357,8 +373,8 @@
     display: flex; flex-direction: column; align-items: center; gap: 6px;
     text-align: center;
   }
-  .status-opt svg { width: 20px; height: 20px; }
-  .status-opt span { font-size: 0.76rem; font-weight: 600; line-height: 1.25; }
+  .status-opt svg, .jobtype-opt svg { width: 20px; height: 20px; }
+  .status-opt span, .jobtype-opt span { font-size: 0.76rem; font-weight: 600; line-height: 1.25; }
   .status-opt[data-status="moving_out"] svg { color: var(--status-moving-out); }
   .status-opt[data-status="active"] svg { color: var(--status-active); }
   .status-opt[data-status="moving_back"] svg { color: var(--status-moving-back); }
@@ -367,6 +383,13 @@
   .status-opt.selected[data-status="active"] { border-color: var(--status-active); background: var(--status-active-soft); }
   .status-opt.selected[data-status="moving_back"] { border-color: var(--status-moving-back); background: var(--status-moving-back-soft); }
   .status-opt.selected[data-status="done"] { border-color: var(--status-done); background: var(--status-done-soft); }
+
+  /* ประเภทงาน (งาน SWITCHING / งานแก้ไขอุปกรณ์) — เลือกก่อนเลือกสถานะย่อย */
+  .jobtype-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .jobtype-opt[data-jobtype="switching"] svg { color: var(--jobtype-switching); }
+  .jobtype-opt[data-jobtype="repair"] svg { color: var(--jobtype-repair); }
+  .jobtype-opt.selected[data-jobtype="switching"] { border-color: var(--jobtype-switching); background: var(--jobtype-switching-soft); }
+  .jobtype-opt.selected[data-jobtype="repair"] { border-color: var(--jobtype-repair); background: var(--jobtype-repair-soft); }
 
   .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
   .btn-primary {
@@ -404,6 +427,8 @@
   .pill[data-status="active"] { background: var(--status-active-soft); color: var(--status-active); }
   .pill[data-status="moving_back"] { background: var(--status-moving-back-soft); color: var(--status-moving-back); }
   .pill[data-status="done"] { background: var(--status-done-soft); color: var(--status-done); }
+  .pill.jobtype-pill[data-jobtype="switching"] { background: var(--jobtype-switching-soft); color: var(--jobtype-switching); }
+  .pill.jobtype-pill[data-jobtype="repair"] { background: var(--jobtype-repair-soft); color: var(--jobtype-repair); }
 
   /* recent list */
   .recent-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -429,7 +454,7 @@
   .filter-spacer { flex: 1; }
 
   .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
-  @media (min-width: 720px) { .stat-grid { grid-template-columns: repeat(5, 1fr); } }
+  @media (min-width: 720px) { .stat-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); } }
   .stat-tile {
     border: 1.5px solid var(--border);
     border-radius: var(--radius-md);
@@ -446,12 +471,21 @@
   .seg-bar div { height: 100%; }
 
   /* timeline */
-  .timeline-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 4px; }
-  @media (min-width: 860px) { .timeline-grid { grid-template-columns: repeat(3, 1fr); } }
+  .timeline-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 4px; }
   .timeline-col-head {
+    grid-row: 1;
     font-family: "Kanit"; font-size: 0.88rem; font-weight: 600;
-    display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--border);
+    display: none;
+    align-items: center; justify-content: space-between;
+    padding-bottom: 8px; margin-bottom: 2px; border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 860px) {
+    .timeline-grid { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row dense; align-items: start; gap: 10px 14px; }
+    .timeline-col-head { display: flex; }
+    .timeline-col-head[data-col="1"] { grid-column: 1; }
+    .timeline-col-head[data-col="2"] { grid-column: 2; }
+    .timeline-col-head[data-col="3"] { grid-column: 3; }
+    .shift-card { grid-column: var(--col-start, auto) / span var(--col-span, 1); }
   }
   .timeline-col-head .time-range { font-size: 0.72rem; color: var(--ink-muted); font-weight: 400; }
   .timeline-track { position: relative; padding-left: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 40px; }
@@ -478,8 +512,7 @@
     margin-bottom: 10px;
   }
 
-  /* ไทม์ไลน์ตามกะ: การ์ดบล็อกสีพาสเทลตามสถานะ จัดเป็น 2 คอลัมน์ต่อกะ */
-  .shift-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+  /* ไทม์ไลน์ตามกะ: การ์ดบล็อกสีพาสเทลตามสถานะ — การ์ดที่ยังไม่ "ย้ายโหลดคืนแล้วเสร็จ" จะลากขยายคาบเกี่ยวหลายกะได้ (ดู --col-start/--col-span) */
   .shift-card {
     border-radius: var(--radius-md);
     padding: 10px 11px;
@@ -489,6 +522,13 @@
     transition: transform 0.12s ease, box-shadow 0.12s ease;
   }
   .shift-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .shift-card-top-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .shift-card-jobtype-chip {
+    font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+  }
+  .shift-card-jobtype-chip[data-jobtype="switching"] { background: var(--jobtype-switching-soft); color: var(--jobtype-switching); }
+  .shift-card-jobtype-chip[data-jobtype="repair"] { background: var(--jobtype-repair-soft); color: var(--jobtype-repair); }
+  .shift-card-shift-badge { font-size: 0.62rem; font-weight: 600; color: var(--ink-muted); white-space: nowrap; }
   .shift-card-time { font-family: "Kanit"; font-size: 0.68rem; font-weight: 600; color: var(--ink-muted); }
   .shift-card-title { font-size: 0.81rem; font-weight: 600; color: var(--ink); line-height: 1.25; }
   .shift-card-detail {
@@ -694,7 +734,12 @@
         </div>
 
         <div class="field" style="margin-top:16px;">
-          <label>สถานะ <span class="req">*</span></label>
+          <label>ประเภทงาน <span class="req">*</span></label>
+          <div class="jobtype-picker" id="jobTypePicker" role="radiogroup"></div>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <label>สถานะ <span class="req">*</span> <span style="font-weight:400;color:var(--ink-muted);">(ใช้ชุดเดียวกันทั้งงาน SWITCHING และงานแก้ไขอุปกรณ์)</span></label>
           <div class="status-picker" id="statusPicker" role="radiogroup"></div>
         </div>
 
@@ -731,6 +776,14 @@
             <option value="1">กะ 1 (00.00-08.00)</option>
             <option value="2">กะ 2 (08.00-16.00)</option>
             <option value="3">กะ 3 (16.00-24.00)</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="fltJobType">ประเภทงาน</label>
+          <select id="fltJobType">
+            <option value="all">ทุกประเภทงาน</option>
+            <option value="switching">งาน SWITCHING</option>
+            <option value="repair">งานแก้ไขอุปกรณ์</option>
           </select>
         </div>
         <div class="filter-field">
@@ -777,6 +830,7 @@
               <th><button type="button" data-sort="station">สถานี</button></th>
               <th><button type="button" data-sort="circuit">วงจร</button></th>
               <th>รายละเอียด</th>
+              <th><button type="button" data-sort="jobType">ประเภทงาน</button></th>
               <th><button type="button" data-sort="status">สถานะ</button></th>
               <th>ผู้บันทึก</th>
               <th></th>
@@ -873,6 +927,14 @@
   var STATUS_MAP = {};
   STATUS_DEFS.forEach(function (s) { STATUS_MAP[s.key] = s; });
 
+  /* ประเภทงาน (ระดับบนของสถานะ) — แต่ละประเภทใช้สถานะย่อยชุดเดียวกันจาก STATUS_DEFS ด้านบน */
+  var JOB_TYPE_DEFS = [
+    { key: "switching", label: "งาน SWITCHING", icon: '<path d="M4 9h13M13 4l4 5-4 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 15H7M11 20l-4-5 4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+    { key: "repair", label: "งานแก้ไขอุปกรณ์", icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' }
+  ];
+  var JOB_TYPE_MAP = {};
+  JOB_TYPE_DEFS.forEach(function (j) { JOB_TYPE_MAP[j.key] = j; });
+
   var SHIFT_DEFS = [
     { key: 1, label: "กะ 1", range: "00.00 - 08.00 น.", startHour: 0, endHour: 8 },
     { key: 2, label: "กะ 2", range: "08.00 - 16.00 น.", startHour: 8, endHour: 16 },
@@ -903,6 +965,7 @@
     statusLog: [],
     config: { stations: DEFAULT_STATIONS.slice(), circuits: [] },
     selectedShift: null,
+    selectedJobType: "switching",
     selectedStatus: "moving_out",
     selectedVoltages: [],
     view: "entry",
@@ -945,6 +1008,14 @@
     if (parts.length !== 3) return dateStr;
     return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
+  /** วันที่+เวลาของ timestamp จริง (ไม่ใช่วันที่กะที่เลือกในฟอร์ม) ใช้เป็นหัวการ์ดไทม์ไลน์ */
+  function fmtDateTimeThai(iso) {
+    try {
+      var d = new Date(iso);
+      var dateStr = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+      return fmtDateThai(dateStr) + " " + fmtTime(iso);
+    } catch (e) { return "-"; }
+  }
   function statusIconSvg(key, size) {
     var s = STATUS_MAP[key];
     if (!s) return "";
@@ -954,6 +1025,27 @@
     var s = STATUS_MAP[key];
     if (!s) return "";
     return '<span class="pill" data-status="' + key + '">' + statusIconSvg(key, 12) + esc(s.label) + "</span>";
+  }
+  function jobTypeIconSvg(key, size) {
+    var j = JOB_TYPE_MAP[key];
+    if (!j) return "";
+    return '<svg width="' + (size || 12) + '" height="' + (size || 12) + '" viewBox="0 0 24 24" fill="none">' + j.icon + "</svg>";
+  }
+  function jobTypePillHtml(key) {
+    var j = JOB_TYPE_MAP[key];
+    if (!j) return "";
+    return '<span class="pill jobtype-pill" data-jobtype="' + key + '">' + jobTypeIconSvg(key, 12) + esc(j.label) + "</span>";
+  }
+  /** ข้อมูลเก่า (ก่อนมีประเภทงาน 2 ระดับ) อาจไม่มี jobType หรือใช้สถานะเก่า "damaged"/"repaired" ที่ยกเลิกไปแล้ว
+   *  แปลงให้เข้ากับโครงสร้างใหม่เสมอ: damaged -> งานแก้ไขอุปกรณ์/อยู่ระหว่างปฏิบัติงาน, repaired -> งานแก้ไขอุปกรณ์/เสร็จแล้ว */
+  function normalizeStatusValue(obj) {
+    var raw = obj.status;
+    if (raw === "damaged") { obj.status = "active"; if (!obj.jobType) obj.jobType = "repair"; }
+    else if (raw === "repaired") { obj.status = "done"; if (!obj.jobType) obj.jobType = "repair"; }
+    if (!obj.jobType) obj.jobType = "switching";
+    if (!STATUS_MAP[obj.status]) obj.status = "moving_out";
+    if (!JOB_TYPE_MAP[obj.jobType]) obj.jobType = "switching";
+    return obj;
   }
   function showToast(msg, type) {
     var stack = $("toastStack");
@@ -981,8 +1073,8 @@
   /* ---------------- Google Sheets (Apps Script) backend ---------------- */
   function applyState(s) {
     if (!s) return;
-    if (Array.isArray(s.records)) state.records = s.records;
-    if (Array.isArray(s.statusLog)) state.statusLog = s.statusLog;
+    if (Array.isArray(s.records)) state.records = s.records.map(normalizeStatusValue);
+    if (Array.isArray(s.statusLog)) state.statusLog = s.statusLog.map(normalizeStatusValue);
     if (Array.isArray(s.stations) && s.stations.length) state.config.stations = s.stations;
     if (Array.isArray(s.circuits)) state.config.circuits = s.circuits;
   }
@@ -992,6 +1084,27 @@
     return state.statusLog
       .filter(function (e) { return e.recordId === id; })
       .sort(function (a, b) { return (a.at || "").localeCompare(b.at || ""); });
+  }
+
+  /** กะเริ่มต้น/สิ้นสุดที่การ์ดไทม์ไลน์ของรายการนี้ควรลากขยายไปถึง (สำหรับวันที่ dateVal ที่กำลังแสดงผล)
+   *  - ถ้ายังไม่ถึงสถานะ "ย้ายโหลดคืนแล้วเสร็จ" -> ลากขยายไปถึงกะปัจจุบัน (ถ้าเป็นวันนี้) หรือกะสุดท้ายของวันนั้น (ถ้าเป็นวันที่ผ่านมาแล้ว)
+   *  - ถ้าถึงสถานะ "เสร็จ" แล้ว -> หยุดที่กะที่ถูกปรับเป็นเสร็จ (ดูจากประวัติ StatusLog) */
+  function shiftSpanForRecord(r) {
+    var start = Number(r.shift) || 1;
+    if (r.status === "done") {
+      var hist = historyForRecord(r.id);
+      var doneShift = start;
+      for (var i = 0; i < hist.length; i++) {
+        if (hist[i].status === "done") {
+          var doneDate = (hist[i].at || "").slice(0, 10);
+          if (doneDate === r.date) doneShift = currentShiftKey(new Date(hist[i].at));
+          break;
+        }
+      }
+      return { start: start, end: Math.max(start, doneShift) };
+    }
+    var endShift = (r.date === todayStr()) ? currentShiftKey() : 3;
+    return { start: start, end: Math.max(start, endShift) };
   }
 
   async function apiGet() {
@@ -1112,6 +1225,21 @@
       btn.addEventListener("click", function () {
         state.selectedStatus = btn.getAttribute("data-status");
         renderStatusPicker();
+      });
+    });
+  }
+
+  function renderJobTypePicker() {
+    var el = $("jobTypePicker");
+    el.innerHTML = JOB_TYPE_DEFS.map(function (j) {
+      var sel = state.selectedJobType === j.key;
+      return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '">' +
+        '<svg viewBox="0 0 24 24" fill="none">' + j.icon + "</svg><span>" + esc(j.label) + "</span></button>";
+    }).join("");
+    Array.prototype.forEach.call(el.querySelectorAll(".jobtype-opt"), function (btn) {
+      btn.addEventListener("click", function () {
+        state.selectedJobType = btn.getAttribute("data-jobtype");
+        renderJobTypePicker();
       });
     });
   }
@@ -1256,12 +1384,14 @@
     var dateFrom = $("fltDateFrom").value;
     var dateTo = $("fltDateTo").value;
     var shift = $("fltShift").value;
+    var jobType = $("fltJobType").value;
     var status = $("fltStatus").value;
     var q = ($("fltSearch").value || "").trim().toLowerCase();
     return state.records.filter(function (r) {
       if (dateFrom && r.date < dateFrom) return false;
       if (dateTo && r.date > dateTo) return false;
       if (shift !== "all" && String(r.shift) !== shift) return false;
+      if (jobType !== "all" && r.jobType !== jobType) return false;
       if (status !== "all" && r.status !== status) return false;
       if (q) {
         var hay = [r.station, r.circuit, r.detail, r.recordedBy].join(" ").toLowerCase();
@@ -1298,23 +1428,35 @@
     var today = todayStr();
     var timelineGridEl = $("timelineGrid");
 
+    /** การ์ดทุกใบของวันที่ dateVal อยู่ใน grid เดียวกัน (3 คอลัมน์ = 3 กะ) จัดตำแหน่งด้วย --col-start/--col-span
+     *  เพื่อให้การ์ดที่ยังไม่ "เสร็จ" ลากขยายคาบเกี่ยวข้ามกะได้ — แทนที่จะแยกเป็น 3 คอลัมน์อิสระเหมือนเดิม */
     function shiftColumnsHtml(dateVal) {
-      var todays = records.filter(function (r) { return r.date === dateVal; });
-      return SHIFT_DEFS.map(function (s) {
-        var items = todays.filter(function (r) { return Number(r.shift) === s.key; })
-          .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
-        var body = items.length ? '<div class="shift-card-grid">' + items.map(function (r) {
-          var label = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
-          return '<div class="shift-card" data-status="' + esc(r.status) + '" data-id="' + r.id + '">' +
-            '<div class="shift-card-time tabular">' + fmtTime(r.createdAt) + "</div>" +
-            '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
-            (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
-            '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(label) + "</div>" +
-            "</div>";
-        }).join("") + "</div>" : '<div class="timeline-empty">ไม่มีรายการในกะนี้</div>';
-        return '<div><div class="timeline-col-head">' + s.label + '<span class="time-range">' + s.range + "</span></div>" +
-          body + "</div>";
+      var headers = SHIFT_DEFS.map(function (s) {
+        return '<div class="timeline-col-head" data-col="' + s.key + '">' + s.label + '<span class="time-range">' + s.range + "</span></div>";
       }).join("");
+      var todays = records.filter(function (r) { return r.date === dateVal; })
+        .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
+      if (!todays.length) {
+        return headers + '<div class="timeline-empty" style="grid-column:1/-1;">ไม่มีรายการในวันนี้</div>';
+      }
+      var cards = todays.map(function (r) {
+        var span = shiftSpanForRecord(r);
+        var shiftLabel = span.start === span.end ? ("กะ " + span.start) : ("กะ " + span.start + "–" + span.end);
+        var statusLabel = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
+        var jobTypeLabel = (JOB_TYPE_MAP[r.jobType] && JOB_TYPE_MAP[r.jobType].label) || r.jobType;
+        var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';"';
+        return '<div class="shift-card" data-status="' + esc(r.status) + '" data-jobtype="' + esc(r.jobType) + '" data-id="' + r.id + '" ' + style + '>' +
+          '<div class="shift-card-top-row">' +
+            '<span class="shift-card-jobtype-chip" data-jobtype="' + esc(r.jobType) + '">' + esc(jobTypeLabel) + "</span>" +
+            '<span class="shift-card-shift-badge">' + shiftLabel + "</span>" +
+          "</div>" +
+          '<div class="shift-card-time tabular">วันที่บันทึก : ' + fmtDateTimeThai(r.createdAt) + "</div>" +
+          '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
+          (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
+          '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(statusLabel) + "</div>" +
+          "</div>";
+      }).join("");
+      return headers + cards;
     }
 
     if (!hasRangeFilter) {
@@ -1373,6 +1515,7 @@
         "<td>" + esc(r.station) + "</td>" +
         "<td>" + esc(r.circuit) + "</td>" +
         '<td class="cell-detail">' + esc(r.detail) + "</td>" +
+        "<td>" + jobTypePillHtml(r.jobType) + "</td>" +
         "<td>" + statusPillHtml(r.status) + "</td>" +
         "<td>" + esc(r.recordedBy) + "</td>" +
         '<td><div class="row-actions">' +
@@ -1459,6 +1602,7 @@
         '<span>วันที่ ' + fmtDateThai(r.date) + "</span><span>กะ " + esc(r.shift) + "</span>" +
         (r.recordedBy ? "<span>ผู้บันทึก " + esc(r.recordedBy) + "</span>" : "") +
       "</div>" +
+      '<div class="record-log-meta" style="margin-top:4px;">' + jobTypePillHtml(r.jobType) + "</div>" +
       (r.detail ? '<div class="record-log-detail">' + esc(r.detail) + "</div>" : "");
 
     var statusOptions = STATUS_DEFS.map(function (s) {
@@ -1633,6 +1777,7 @@
       station: station,
       circuit: circuit,
       detail: detail,
+      jobType: state.selectedJobType,
       status: state.selectedStatus,
       recordedBy: recordedBy
     });
@@ -1655,6 +1800,8 @@
     $("fDetail").value = "";
     $("fStation").value = "";
     renderCircuitOptions();
+    state.selectedJobType = "switching";
+    renderJobTypePicker();
     state.selectedStatus = "moving_out";
     renderStatusPicker();
   }
@@ -1696,7 +1843,7 @@
       if (btn) removeCircuit(btn.getAttribute("data-code"));
     });
 
-    ["fltDateFrom", "fltDateTo", "fltShift", "fltStatus", "fltSearch"].forEach(function (id) {
+    ["fltDateFrom", "fltDateTo", "fltShift", "fltJobType", "fltStatus", "fltSearch"].forEach(function (id) {
       $(id).addEventListener("input", renderOverview);
       $(id).addEventListener("change", renderOverview);
     });
@@ -1704,6 +1851,7 @@
       $("fltDateFrom").value = "";
       $("fltDateTo").value = "";
       $("fltShift").value = "all";
+      $("fltJobType").value = "all";
       $("fltStatus").value = "all";
       $("fltSearch").value = "";
       renderOverview();
@@ -1721,6 +1869,7 @@
     if (savedRecorder) $("fRecorder").value = savedRecorder;
 
     renderShiftPicker();
+    renderJobTypePicker();
     renderStatusPicker();
     renderVoltagePicker();
     renderStationOptions();
