@@ -520,6 +520,8 @@
     transition: transform 0.12s ease, box-shadow 0.12s ease;
   }
   .shift-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  /* รายการค้างจากวันก่อนหน้าที่ยังไม่เสร็จ ยังคงแสดงในไทม์ไลน์ "วันนี้" ต่อไป — ใช้เส้นประด้านซ้ายแยกให้เห็นชัดว่าไม่ใช่รายการของวันนี้ */
+  .shift-card.shift-card-carryover { border-left-style: dashed; }
   .shift-card-top-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
   .shift-card-jobtype-chip {
     font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
@@ -1437,22 +1439,38 @@
 
     /** การ์ดทุกใบของวันที่ dateVal อยู่ใน grid เดียวกัน (3 คอลัมน์ = 3 กะ) จัดตำแหน่งด้วย --col-start/--col-span
      *  เพื่อให้การ์ดที่ยังไม่ "เสร็จ" ลากขยายคาบเกี่ยวข้ามกะได้ — แทนที่จะแยกเป็น 3 คอลัมน์อิสระเหมือนเดิม */
-    function shiftColumnsHtml(dateVal) {
+    /** includeCarryOver = true เฉพาะตอนแสดงหน้า "วันนี้" แบบไม่เลือกช่วงวันที่ — รายการที่ค้างจากวันก่อนหน้า
+     *  (date < dateVal) และยังไม่ถึงสถานะ "เสร็จ" จะยังคงแสดงต่อในไทม์ไลน์ของวันนี้ ไม่หายไปตามวันที่เปลี่ยน
+     *  (เดิมการ์ดผูกอยู่กับ "วันที่บันทึก" ของมันเท่านั้น พอวันเปลี่ยนรายการค้างจะหายไปจากหน้าวันนี้ทันที) */
+    function shiftColumnsHtml(dateVal, includeCarryOver) {
       var headers = SHIFT_DEFS.map(function (s) {
         return '<div class="timeline-col-head" data-col="' + s.key + '">' + s.label + '<span class="time-range">' + s.range + "</span></div>";
       }).join("");
-      var todays = records.filter(function (r) { return r.date === dateVal; })
+      var owned = records.filter(function (r) { return r.date === dateVal; });
+      var carried = includeCarryOver
+        ? records.filter(function (r) { return r.date < dateVal && r.status !== "done"; })
+        : [];
+      var todays = owned.concat(carried)
         .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); });
       if (!todays.length) {
         return headers + '<div class="timeline-empty" style="grid-column:1/-1;">ไม่มีรายการในวันนี้</div>';
       }
       var cards = todays.map(function (r) {
-        var span = shiftSpanForRecord(r);
-        var shiftLabel = span.start === span.end ? ("กะ " + span.start) : ("กะ " + span.start + "–" + span.end);
+        var isCarryOver = r.date !== dateVal;
+        var span, shiftLabel;
+        if (isCarryOver) {
+          // ไม่รู้ว่า "อยู่กะไหนของวันนี้" ตรงๆ (เริ่มมาจากวันก่อนหน้า) เลยลากขยายตั้งแต่กะ 1 ถึงกะปัจจุบันของวันนี้ไปก่อน
+          // และเปลี่ยนป้ายจาก "กะ X-Y" เป็นบอกวันที่ค้างมาแทน ให้รู้ทันทีว่าไม่ใช่รายการของวันนี้
+          span = { start: 1, end: Math.max(1, currentShiftKey()) };
+          shiftLabel = "ค้างจาก " + fmtDateThai(r.date);
+        } else {
+          span = shiftSpanForRecord(r);
+          shiftLabel = span.start === span.end ? ("กะ " + span.start) : ("กะ " + span.start + "–" + span.end);
+        }
         var statusLabel = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
         var jobTypeLabel = (JOB_TYPE_MAP[r.jobType] && JOB_TYPE_MAP[r.jobType].label) || r.jobType;
         var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';"';
-        return '<div class="shift-card" data-status="' + esc(r.status) + '" data-jobtype="' + esc(r.jobType) + '" data-id="' + r.id + '" ' + style + '>' +
+        return '<div class="shift-card' + (isCarryOver ? " shift-card-carryover" : "") + '" data-status="' + esc(r.status) + '" data-jobtype="' + esc(r.jobType) + '" data-id="' + r.id + '" ' + style + '>' +
           '<div class="shift-card-top-row">' +
             '<span class="shift-card-jobtype-chip" data-jobtype="' + esc(r.jobType) + '">' + esc(jobTypeLabel) + "</span>" +
             '<span class="shift-card-shift-badge">' + shiftLabel + "</span>" +
@@ -1467,9 +1485,9 @@
     }
 
     if (!hasRangeFilter) {
-      // ไม่ได้เลือกช่วงวันที่ — แสดงเฉพาะของวันนี้เหมือนเดิม
+      // ไม่ได้เลือกช่วงวันที่ — แสดงของวันนี้ + รายการค้างจากวันก่อนหน้าที่ยังไม่เสร็จ (ดูคอมเมนต์ที่ shiftColumnsHtml)
       timelineGridEl.classList.remove("stacked-days");
-      timelineGridEl.innerHTML = shiftColumnsHtml(today);
+      timelineGridEl.innerHTML = shiftColumnsHtml(today, true);
       $("timelineSub").textContent = "วันที่ " + fmtDateThai(today) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
       return;
     }
