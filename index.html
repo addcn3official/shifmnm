@@ -614,6 +614,10 @@
     padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-strong);
     background: var(--surface); color: var(--ink); cursor: pointer;
   }
+  .status-change-select:disabled { opacity: 0.6; cursor: not-allowed; }
+  /* อัปเดต #22: ล็อกฟิลด์ประเภทงาน/รายละเอียดงานไว้อ่านอย่างเดียว จนกว่าจะกดปุ่ม "แก้ไข" */
+  .jobtype-opt:disabled { opacity: 0.55; cursor: not-allowed; }
+  #recordLogDetailInput:read-only { background: var(--surface-2); color: var(--ink-secondary); cursor: default; }
 
   /* minimal confirm modal */
   .confirm-modal { max-width: 340px; padding: 26px 22px 20px; text-align: center; }
@@ -902,12 +906,15 @@
         <label for="recordLogDetailInput">รายละเอียดงาน</label>
         <textarea id="recordLogDetailInput" rows="3"></textarea>
       </div>
+
+      <div class="record-log-status-row" id="recordLogStatusRow"></div>
+
       <div class="record-log-edit-actions">
+        <button type="button" class="btn-ghost" id="recordLogEditBtn" style="padding:8px 16px;font-size:.82rem;">แก้ไข</button>
         <button type="button" class="btn-primary" id="recordLogSaveEditBtn" style="padding:8px 16px;font-size:.82rem;">บันทึกการแก้ไข</button>
         <span class="save-note" id="recordLogEditNote"></span>
       </div>
 
-      <div class="record-log-status-row" id="recordLogStatusRow"></div>
       <div class="timeline-track" id="recordLogTrack"></div>
       <div class="record-log-note hidden" id="recordLogNote">ไม่มีประวัติการเปลี่ยนสถานะโดยละเอียดของรายการนี้ (บันทึกไว้ก่อนเปิดใช้งานฟีเจอร์นี้) — แสดงเฉพาะสถานะปัจจุบัน</div>
     </div>
@@ -1651,6 +1658,8 @@
 
   /* ---------------- record log modal ---------------- */
   var recordLogEditJobType = "switching";
+  /** อัปเดต #22: false = โหมดดูอย่างเดียว (ค่าเริ่มต้นทุกครั้งที่เปิดป๊อปอัป) ต้องกด "แก้ไข" ก่อนถึงจะแก้ประเภทงาน/รายละเอียดงาน/สถานะได้ */
+  var recordLogEditMode = false;
 
   /** ตัวเลือกประเภทงานในป๊อปอัปประวัติ — แยกต่างหากจากตัวเลือกในฟอร์มบันทึกใหม่ (#jobTypePicker/state.selectedJobType) โดยตั้งใจ */
   function renderRecordLogJobTypePicker(current) {
@@ -1658,7 +1667,7 @@
     var el = $("recordLogJobTypePicker");
     el.innerHTML = JOB_TYPE_DEFS.map(function (j) {
       var sel = recordLogEditJobType === j.key;
-      return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '">' +
+      return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '"' + (recordLogEditMode ? "" : " disabled") + '>' +
         '<svg viewBox="0 0 24 24" fill="none">' + j.icon + "</svg><span>" + esc(j.label) + "</span></button>";
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".jobtype-opt"), function (btn) {
@@ -1666,6 +1675,21 @@
         renderRecordLogJobTypePicker(btn.getAttribute("data-jobtype"));
       });
     });
+  }
+
+  /** อัปเดต #22: สลับโหมดล็อก/ปลดล็อกฟิลด์ประเภทงาน, รายละเอียดงาน และสถานะปัจจุบันในป๊อปอัปประวัติ
+   *  active=false (ค่าเริ่มต้นตอนเปิดป๊อปอัป): ทุกฟิลด์ดูอย่างเดียว, ปุ่ม "แก้ไข" แสดง, ปุ่ม "บันทึกการแก้ไข" กดไม่ได้
+   *  active=true (หลังกด "แก้ไข"): ทุกฟิลด์แก้ไขได้, ปุ่ม "แก้ไข" ซ่อน, ปุ่ม "บันทึกการแก้ไข" กดได้ */
+  function setRecordLogEditMode(active) {
+    recordLogEditMode = active;
+    Array.prototype.forEach.call($("recordLogJobTypePicker").querySelectorAll(".jobtype-opt"), function (btn) {
+      btn.disabled = !active;
+    });
+    $("recordLogDetailInput").readOnly = !active;
+    var statusSelect = $("recordLogStatusSelect");
+    if (statusSelect) statusSelect.disabled = !active;
+    $("recordLogEditBtn").classList.toggle("hidden", active);
+    $("recordLogSaveEditBtn").disabled = !active;
   }
 
   /** บันทึกการแก้ไขประเภทงาน/รายละเอียดงานจากป๊อปอัปประวัติ (ไม่ยุ่งกับสถานะ/ประวัติการเปลี่ยนสถานะ) */
@@ -1688,6 +1712,8 @@
     if (!r) return;
     var hist = historyForRecord(id);
 
+    recordLogEditMode = false; // อัปเดต #22: ทุกครั้งที่เปิดป๊อปอัปใหม่ ให้เริ่มที่โหมดดูอย่างเดียวเสมอ
+
     $("recordLogSummary").innerHTML =
       '<div class="record-log-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
       '<div class="record-log-meta">' +
@@ -1699,13 +1725,16 @@
     $("recordLogDetailInput").value = r.detail || "";
     $("recordLogEditNote").textContent = "";
     $("recordLogSaveEditBtn").onclick = function () { saveRecordLogEdit(id); };
+    $("recordLogEditBtn").onclick = function () { setRecordLogEditMode(true); };
 
     var statusOptions = STATUS_DEFS.map(function (s) {
       return '<option value="' + s.key + '"' + (s.key === r.status ? " selected" : "") + ">" + esc(s.label) + "</option>";
     }).join("");
     $("recordLogStatusRow").innerHTML =
       '<label for="recordLogStatusSelect">สถานะปัจจุบัน</label>' +
-      '<select id="recordLogStatusSelect" class="status-change-select" data-action="status" data-id="' + id + '" data-prev="' + esc(r.status) + '">' + statusOptions + "</select>";
+      '<select id="recordLogStatusSelect" class="status-change-select" data-action="status" data-id="' + id + '" data-prev="' + esc(r.status) + '" disabled>' + statusOptions + "</select>";
+
+    setRecordLogEditMode(false); // ล็อกทุกฟิลด์ (ประเภทงาน/รายละเอียดงาน/สถานะ) ไว้ก่อน จนกว่าจะกด "แก้ไข"
 
     var entries = hist.length ? hist : [{ recordId: id, status: r.status, at: r.createdAt }];
     $("recordLogTrack").innerHTML = entries.map(function (e, i) {
