@@ -343,6 +343,47 @@
     font-family: "Kanit";
   }
   .voltage-chip.selected { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); font-weight: 600; }
+
+  /* อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกันในสถานีเดียว — dropdown แบบ checkbox แทน select ตัวเดียวเดิม */
+  .circuit-multiselect { position: relative; flex: 1; min-width: 0; }
+  .circuit-ms-trigger {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    color: var(--ink);
+    font-family: "Noto Sans Thai";
+    font-size: 0.92rem;
+    text-align: left;
+  }
+  .circuit-ms-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .circuit-ms-trigger.placeholder { color: var(--ink-muted); }
+  .circuit-ms-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
+  .circuit-ms-trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); outline: none; }
+  .circuit-ms-trigger svg { width: 16px; height: 16px; flex: none; color: var(--ink-muted); transition: transform 0.15s; }
+  .circuit-multiselect.open .circuit-ms-trigger svg { transform: rotate(180deg); }
+  .circuit-ms-panel {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+    background: var(--surface); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    max-height: 260px; overflow-y: auto; padding: 6px;
+  }
+  .circuit-ms-actions { display: flex; gap: 4px; padding: 2px 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .circuit-ms-actions button {
+    font-family: "Noto Sans Thai"; font-size: 0.74rem; font-weight: 600; color: var(--accent);
+    background: none; border: none; padding: 3px 6px; border-radius: 6px; cursor: pointer;
+  }
+  .circuit-ms-actions button:hover { background: var(--accent-soft); }
+  .circuit-ms-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 8px; border-radius: 6px; font-size: 0.86rem; cursor: pointer;
+  }
+  .circuit-ms-option:hover { background: var(--surface-2); }
+  .circuit-ms-option input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+  .circuit-ms-option.selected { background: var(--accent-soft); font-weight: 600; }
+  .circuit-ms-empty { padding: 10px 8px; font-size: 0.82rem; color: var(--ink-muted); }
   .shift-opt {
     flex: 1 1 120px;
     border: 1.5px solid var(--border-strong);
@@ -671,7 +712,7 @@
       </button>
       <div>
         <div class="brand-title">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
-        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กฟน.3</div>
+        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กปบ.(น3)</div>
       </div>
     </div>
     <div class="clock-badge">
@@ -734,9 +775,15 @@
             </div>
           </div>
           <div class="field">
-            <label for="fCircuit">วงจร <span class="req">*</span></label>
+            <label for="fCircuitTrigger">วงจร <span class="req">*</span> <span style="font-weight:400;color:var(--ink-muted);">(เลือกได้หลายวงจรพร้อมกัน)</span></label>
             <div class="field-row">
-              <select id="fCircuit" required></select>
+              <div class="circuit-multiselect" id="fCircuitMulti">
+                <button type="button" class="circuit-ms-trigger placeholder" id="fCircuitTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
+                  <span id="fCircuitTriggerText">เลือกสถานีก่อน</span>
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="circuit-ms-panel hidden" id="fCircuitPanel" role="listbox" aria-multiselectable="true"></div>
+              </div>
               <button type="button" class="icon-btn hidden" id="manageCircuitBtn" title="จัดการรายการวงจร" aria-label="จัดการรายการวงจร">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
               </button>
@@ -1001,6 +1048,7 @@
     selectedJobType: "switching",
     selectedStatus: "moving_out",
     selectedVoltages: [],
+    selectedCircuits: [], // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน
     view: "entry",
     sort: { key: "date", dir: "desc" },
     manageTab: "station",
@@ -1359,25 +1407,99 @@
     renderSelectOptions($("fStation"), groups, "เลือกสถานี");
   }
 
-  /** วงจรจะเป็น subset ของสถานีที่เลือกไว้ในฟอร์มเสมอ (+ กรองตามระดับแรงดันถ้าเลือกไว้) */
-  function renderCircuitOptions() {
+  /** วงจรจะเป็น subset ของสถานีที่เลือกไว้ในฟอร์มเสมอ (+ กรองตามระดับแรงดันถ้าเลือกไว้) — อัปเดต #24: คืนรายการวงจรที่ตรงเงื่อนไข ใช้ร่วมกันทั้งตอน render และตอนกด "เลือกทั้งหมด" */
+  function currentCircuitMatches() {
     var stationCode = $("fStation") ? $("fStation").value : "";
-    if (!stationCode) {
-      $("fCircuit").innerHTML = '<option value="">เลือกสถานีก่อน</option>';
-      return;
-    }
+    if (!stationCode) return [];
     var voltages = state.selectedVoltages;
-    var matches = state.config.circuits.filter(function (c) {
+    return state.config.circuits.filter(function (c) {
       if (c.station !== stationCode) return false;
       if (!voltages.length) return true;
       var v = c.voltage != null ? String(c.voltage).trim() : "";
       return !v || voltages.indexOf(v) !== -1;
-    });
-    var opts = matches.slice().sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; }).map(function (c) {
+    }).slice().sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+  }
+
+  /** อัปเดต #24: อัปเดตข้อความสรุปบนปุ่ม dropdown ตามจำนวนวงจรที่เลือกอยู่ (state.selectedCircuits) */
+  function updateCircuitTriggerText() {
+    var textEl = $("fCircuitTriggerText");
+    var trigger = $("fCircuitTrigger");
+    var n = state.selectedCircuits.length;
+    if (!n) {
+      textEl.textContent = "เลือกวงจร";
+      trigger.classList.add("placeholder");
+    } else if (n <= 2) {
+      textEl.textContent = state.selectedCircuits.join(", ");
+      trigger.classList.remove("placeholder");
+    } else {
+      textEl.textContent = "เลือกแล้ว " + n + " วงจร";
+      trigger.classList.remove("placeholder");
+    }
+  }
+
+  function openCircuitPanel() {
+    if ($("fCircuitTrigger").disabled) return;
+    $("fCircuitMulti").classList.add("open");
+    $("fCircuitPanel").classList.remove("hidden");
+    $("fCircuitTrigger").setAttribute("aria-expanded", "true");
+  }
+  function closeCircuitPanel() {
+    $("fCircuitMulti").classList.remove("open");
+    $("fCircuitPanel").classList.add("hidden");
+    $("fCircuitTrigger").setAttribute("aria-expanded", "false");
+  }
+  function toggleCircuitPanel() {
+    if ($("fCircuitMulti").classList.contains("open")) closeCircuitPanel(); else openCircuitPanel();
+  }
+
+  /** วาดตัวเลือกวงจรใหม่ (checkbox dropdown) ตามสถานี/ระดับแรงดันที่เลือกไว้ — ไม่แตะสถานะเปิด/ปิดของ panel เอง เรียกซ้ำได้ปลอดภัย (เช่นตอน poll ข้อมูลใหม่ทุก 8 วิ) */
+  function renderCircuitOptions() {
+    var trigger = $("fCircuitTrigger");
+    var panel = $("fCircuitPanel");
+    var stationCode = $("fStation") ? $("fStation").value : "";
+
+    if (!stationCode) {
+      state.selectedCircuits = [];
+      trigger.disabled = true;
+      trigger.classList.add("placeholder");
+      $("fCircuitTriggerText").textContent = "เลือกสถานีก่อน";
+      panel.innerHTML = "";
+      closeCircuitPanel();
+      return;
+    }
+
+    var matches = currentCircuitMatches();
+
+    // คงเฉพาะวงจรที่เคยเลือกไว้และยังอยู่ใน subset ปัจจุบัน (เหมือนพฤติกรรมเดิมของ select ตัวเดียวที่คงค่าไว้ถ้ายังมีอยู่)
+    var matchNames = {};
+    matches.forEach(function (c) { matchNames[c.name] = true; });
+    state.selectedCircuits = state.selectedCircuits.filter(function (name) { return matchNames[name]; });
+
+    if (!matches.length) {
+      trigger.disabled = true;
+      trigger.classList.add("placeholder");
+      $("fCircuitTriggerText").textContent = "ไม่มีวงจรของสถานีนี้";
+      panel.innerHTML = '<div class="circuit-ms-empty">ไม่มีวงจรของสถานีนี้</div>';
+      closeCircuitPanel();
+      return;
+    }
+
+    trigger.disabled = false;
+    updateCircuitTriggerText();
+
+    var optsHtml = matches.map(function (c) {
+      var sel = state.selectedCircuits.indexOf(c.name) !== -1;
       var label = c.voltage ? c.name + " (" + c.voltage + " kV)" : c.name;
-      return '<option value="' + esc(c.name) + '">' + esc(label) + "</option>";
-    });
-    renderSelectOptions($("fCircuit"), opts, matches.length ? "เลือกวงจร" : "ไม่มีวงจรของสถานีนี้");
+      return '<label class="circuit-ms-option' + (sel ? " selected" : "") + '" role="option" aria-selected="' + sel + '">' +
+        '<input type="checkbox" data-circuit="' + esc(c.name) + '"' + (sel ? " checked" : "") + " />" +
+        "<span>" + esc(label) + "</span></label>";
+    }).join("");
+
+    panel.innerHTML =
+      '<div class="circuit-ms-actions">' +
+        '<button type="button" data-ms-action="all">เลือกทั้งหมด</button>' +
+        '<button type="button" data-ms-action="clear">ล้างที่เลือก</button>' +
+      "</div>" + optsHtml;
   }
 
   /* ---------------- clock / live shift badge ---------------- */
@@ -1892,34 +2014,51 @@
   }
 
   /* ---------------- form submit ---------------- */
+  // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน — ส่ง addRecord ทีละครั้งต่อ 1 วงจร (เหมือนกรอกฟอร์มซ้ำหลายรอบแต่ทำครั้งเดียว)
+  // ข้อมูลอื่นๆ (วันที่/กะ/สถานี/รายละเอียด/ประเภทงาน/สถานะ/ผู้บันทึก) เหมือนกันทุกรายการ ไม่ต้องแก้ AppsScript_Code.gs เพราะยังเป็นการสร้างทีละแถวแบบเดิม
   async function handleSubmit(e) {
     e.preventDefault();
     if (!state.selectedShift) { showToast("กรุณาเลือกกะ", "error"); return; }
-    var station = $("fStation").value, circuit = $("fCircuit").value;
+    var station = $("fStation").value;
+    var circuits = state.selectedCircuits.slice();
     var detail = $("fDetail").value.trim(), recordedBy = $("fRecorder").value.trim(), date = $("fDate").value;
-    if (!station || !circuit || !detail || !recordedBy || !date) {
-      showToast("กรุณากรอกข้อมูลให้ครบทุกช่องที่จำเป็น", "error");
+    if (!station || !circuits.length || !detail || !recordedBy || !date) {
+      showToast(station && !circuits.length ? "กรุณาเลือกวงจรอย่างน้อย 1 รายการ" : "กรุณากรอกข้อมูลให้ครบทุกช่องที่จำเป็น", "error");
       return;
     }
     var submitBtn = $("submitBtn");
     submitBtn.disabled = true;
-    $("saveNote").textContent = "กำลังบันทึก...";
 
-    var res = await saveAction("addRecord", {
-      date: date,
-      shift: state.selectedShift,
-      station: station,
-      circuit: circuit,
-      detail: detail,
-      jobType: state.selectedJobType,
-      status: state.selectedStatus,
-      recordedBy: recordedBy
-    });
+    var successCount = 0;
+    for (var i = 0; i < circuits.length; i++) {
+      $("saveNote").textContent = circuits.length > 1
+        ? "กำลังบันทึก " + (i + 1) + "/" + circuits.length + " (" + circuits[i] + ")..."
+        : "กำลังบันทึก...";
+      var res = await saveAction("addRecord", {
+        date: date,
+        shift: state.selectedShift,
+        station: station,
+        circuit: circuits[i],
+        detail: detail,
+        jobType: state.selectedJobType,
+        status: state.selectedStatus,
+        recordedBy: recordedBy
+      });
+      if (res.ok) successCount++;
+      else break; // saveAction ขึ้น toast แจ้ง error ให้แล้ว หยุดรายการที่เหลือกันยิงซ้ำรัวๆ ถ้าเป็นปัญหาเชื่อมต่อ
+    }
 
     submitBtn.disabled = false;
-    if (res.ok) {
-      $("saveNote").textContent = "บันทึกสำเร็จ";
-      showToast("บันทึกข้อมูลสำเร็จ", "success");
+    if (successCount > 0) {
+      var allDone = successCount === circuits.length;
+      $("saveNote").textContent = circuits.length > 1
+        ? (allDone ? "บันทึกสำเร็จ " + successCount + " วงจร" : "บันทึกสำเร็จ " + successCount + "/" + circuits.length + " วงจร (มีบางรายการไม่สำเร็จ)")
+        : "บันทึกสำเร็จ";
+      if (circuits.length > 1) {
+        showToast(allDone ? "บันทึกข้อมูลสำเร็จ " + successCount + " วงจร" : "บันทึกสำเร็จ " + successCount + "/" + circuits.length + " วงจร", allDone ? "success" : "error");
+      } else {
+        showToast("บันทึกข้อมูลสำเร็จ", "success");
+      }
       localPrefSet("shiftlog_recorder", recordedBy);
       $("fDetail").value = "";
       renderRecentList();
@@ -1933,6 +2072,7 @@
   function resetForm() {
     $("fDetail").value = "";
     $("fStation").value = "";
+    state.selectedCircuits = [];
     renderCircuitOptions();
     state.selectedJobType = "switching";
     renderJobTypePicker();
@@ -1948,6 +2088,38 @@
     $("entryForm").addEventListener("submit", handleSubmit);
     $("resetFormBtn").addEventListener("click", resetForm);
     $("fStation").addEventListener("change", renderCircuitOptions);
+
+    // อัปเดต #24: dropdown แบบ checkbox หลายรายการสำหรับเลือกวงจร
+    $("fCircuitTrigger").addEventListener("click", function (e) {
+      e.preventDefault();
+      toggleCircuitPanel();
+    });
+    $("fCircuitPanel").addEventListener("change", function (e) {
+      var cb = e.target.closest('input[type="checkbox"][data-circuit]');
+      if (!cb) return;
+      var name = cb.getAttribute("data-circuit");
+      var idx = state.selectedCircuits.indexOf(name);
+      if (cb.checked && idx === -1) state.selectedCircuits.push(name);
+      else if (!cb.checked && idx !== -1) state.selectedCircuits.splice(idx, 1);
+      renderCircuitOptions();
+    });
+    $("fCircuitPanel").addEventListener("click", function (e) {
+      var actionBtn = e.target.closest("button[data-ms-action]");
+      if (!actionBtn) return;
+      e.preventDefault();
+      e.stopPropagation(); // กัน panel ปิดตัวเอง — renderCircuitOptions() ด้านล่างเปลี่ยน DOM ของปุ่มนี้ก่อนที่ click จะ bubble ไปถึง document listener (ปิด panel เมื่อคลิกนอกกล่อง)
+      var action = actionBtn.getAttribute("data-ms-action");
+      if (action === "all") state.selectedCircuits = currentCircuitMatches().map(function (c) { return c.name; });
+      else if (action === "clear") state.selectedCircuits = [];
+      renderCircuitOptions();
+    });
+    document.addEventListener("click", function (e) {
+      var multi = $("fCircuitMulti");
+      if (multi.classList.contains("open") && !multi.contains(e.target)) closeCircuitPanel();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeCircuitPanel();
+    });
 
     $("manageStationBtn").addEventListener("click", function () { openManageModal("station"); });
     $("manageCircuitBtn").addEventListener("click", function () { openManageModal("circuit"); });
