@@ -712,7 +712,7 @@
       </button>
       <div>
         <div class="brand-title">บันทึกและติดตามการปฏิบัติงานประจำกะ</div>
-        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กปบ.(น3)</div>
+        <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กฟน.3</div>
       </div>
     </div>
     <div class="clock-badge">
@@ -2014,8 +2014,9 @@
   }
 
   /* ---------------- form submit ---------------- */
-  // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน — ส่ง addRecord ทีละครั้งต่อ 1 วงจร (เหมือนกรอกฟอร์มซ้ำหลายรอบแต่ทำครั้งเดียว)
-  // ข้อมูลอื่นๆ (วันที่/กะ/สถานี/รายละเอียด/ประเภทงาน/สถานะ/ผู้บันทึก) เหมือนกันทุกรายการ ไม่ต้องแก้ AppsScript_Code.gs เพราะยังเป็นการสร้างทีละแถวแบบเดิม
+  // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน แต่ยังถือเป็น "1 เหตุการณ์" เดียว — บันทึกเป็นแถวเดียวใน Records
+  // (ไม่ใช่แยกเหตุการณ์ทีละวงจร) โดยรวมชื่อวงจรที่เลือกไว้ทั้งหมดเป็นสตริงเดียวคั่นด้วย ", " เก็บลงคอลัมน์ circuit เดิม
+  // ยังเป็น action addRecord เดิมทุกประการ ไม่ต้องแก้ AppsScript_Code.gs
   async function handleSubmit(e) {
     e.preventDefault();
     if (!state.selectedShift) { showToast("กรุณาเลือกกะ", "error"); return; }
@@ -2028,37 +2029,23 @@
     }
     var submitBtn = $("submitBtn");
     submitBtn.disabled = true;
+    $("saveNote").textContent = "กำลังบันทึก...";
 
-    var successCount = 0;
-    for (var i = 0; i < circuits.length; i++) {
-      $("saveNote").textContent = circuits.length > 1
-        ? "กำลังบันทึก " + (i + 1) + "/" + circuits.length + " (" + circuits[i] + ")..."
-        : "กำลังบันทึก...";
-      var res = await saveAction("addRecord", {
-        date: date,
-        shift: state.selectedShift,
-        station: station,
-        circuit: circuits[i],
-        detail: detail,
-        jobType: state.selectedJobType,
-        status: state.selectedStatus,
-        recordedBy: recordedBy
-      });
-      if (res.ok) successCount++;
-      else break; // saveAction ขึ้น toast แจ้ง error ให้แล้ว หยุดรายการที่เหลือกันยิงซ้ำรัวๆ ถ้าเป็นปัญหาเชื่อมต่อ
-    }
+    var res = await saveAction("addRecord", {
+      date: date,
+      shift: state.selectedShift,
+      station: station,
+      circuit: circuits.join(", "), // เหตุการณ์เดียว ครอบคลุมได้หลายวงจร — เก็บรวมเป็นข้อความเดียวในแถวเดียวกัน
+      detail: detail,
+      jobType: state.selectedJobType,
+      status: state.selectedStatus,
+      recordedBy: recordedBy
+    });
 
     submitBtn.disabled = false;
-    if (successCount > 0) {
-      var allDone = successCount === circuits.length;
-      $("saveNote").textContent = circuits.length > 1
-        ? (allDone ? "บันทึกสำเร็จ " + successCount + " วงจร" : "บันทึกสำเร็จ " + successCount + "/" + circuits.length + " วงจร (มีบางรายการไม่สำเร็จ)")
-        : "บันทึกสำเร็จ";
-      if (circuits.length > 1) {
-        showToast(allDone ? "บันทึกข้อมูลสำเร็จ " + successCount + " วงจร" : "บันทึกสำเร็จ " + successCount + "/" + circuits.length + " วงจร", allDone ? "success" : "error");
-      } else {
-        showToast("บันทึกข้อมูลสำเร็จ", "success");
-      }
+    if (res.ok) {
+      $("saveNote").textContent = "บันทึกสำเร็จ";
+      showToast("บันทึกข้อมูลสำเร็จ", "success");
       localPrefSet("shiftlog_recorder", recordedBy);
       $("fDetail").value = "";
       renderRecentList();
