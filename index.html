@@ -1012,6 +1012,13 @@
 
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
+<!-- อัปเดต #28: เปลี่ยน backend จาก Google Apps Script + Google Sheet มาเป็น Firebase (Firestore) แทน
+     เพื่อแก้ปัญหาเชื่อมต่อไม่เสถียร/ติด quota ของ Apps Script — โหลด Firebase SDK แบบ compat (ใช้ global `firebase`
+     namespace เหมือน SDK รุ่นเก่า) เพื่อให้โค้ดส่วนที่เหลือทั้งไฟล์ (การ render/state management เดิมทั้งหมด)
+     ไม่ต้องแก้โครงสร้างเป็น ES module -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
 <script>
 (function () {
   "use strict";
@@ -1048,16 +1055,41 @@
     ["MR","ชัยนาท"],["SI","สิงห์บุรี"],["DBN","สุพรรณบุรี"]
   ].map(function (p) { return { code: p[0], province: p[1] }; });
 
-  /* วางลิงก์ Web app ของ Google Apps Script ที่ deploy แล้วตรงนี้ (ดูขั้นตอนใน AppsScript_Code.gs) */
-  var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJUh7B8r16L9DtB1m-yc7hRbpQeM_k8fkzgdurn67JrFAgCzTmIqUm84WTWnn_9AlRFg/exec";
-  /* ถ้าตั้ง SHARED_TOKEN ไว้ฝั่ง Apps Script ให้ใส่ค่าเดียวกันตรงนี้ด้วย (เว้นว่างได้ถ้าไม่ได้ล็อก) */
-  var SHARED_TOKEN = "";
+  /* อัปเดต #28: วางค่า config ของโปรเจกต์ Firebase ตรงนี้ (Firebase Console → Project settings → Your apps →
+     เว็บแอป → ก้อนโค้ด firebaseConfig) ค่าพวกนี้เป็นค่าสาธารณะฝั่ง client ใส่ตรงในไฟล์ HTML ได้ตามปกติ ไม่ใช่ความลับ
+     แบบรหัสผ่าน — ความปลอดภัยจริงๆ ควบคุมด้วย Firestore Security Rules (ดู firestore.rules ที่ส่งมาด้วยกัน) */
+  var firebaseConfig = {
+    apiKey: "AIzaSyAcgfxgtAcFQu4dIxqavKVVsZ3TgwoZEIs",
+    authDomain: "shifmnm.firebaseapp.com",
+    projectId: "shifmnm",
+    storageBucket: "shifmnm.firebasestorage.app",
+    messagingSenderId: "935885319237",
+    appId: "1:935885319237:web:ca12e2a714623e6ed6872c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+
   var POLL_INTERVAL_MS = 8000;
-  /* อัปเดต #26: จังหวะลองใหม่เร็วครั้งแรกหลังโหลดพลาด (เพิ่มเป็น 2 เท่าทุกครั้งที่พลาดซ้ำติดกัน จนสูงสุดเท่า POLL_INTERVAL_MS ปกติ) */
+  /* อัปเดต #26: จังหวะลองใหม่เร็วครั้งแรกหลังโหลดพลาด (เพิ่มเป็น 2 เท่าทุกครั้งที่พลาดซ้ำติดกัน จนสูงสุดเท่า POLL_INTERVAL_MS ปกติ)
+     — อัปเดต #28: กลไก retry นี้ยังคงไว้เหมือนเดิมทุกประการ เผื่อเครือข่ายสะดุดชั่วคราว แต่จะไม่เจอปัญหา quota/URL
+     redirect แบบที่ Apps Script เคยมีอีกต่อไป เพราะ Firestore SDK จัดการ retry ระดับเครือข่ายในตัวเองอยู่แล้ว */
   var POLL_RETRY_MS = 2000;
 
   function isConfigured() {
-    return !!APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf("PASTE_YOUR") !== 0;
+    return !!firebaseConfig.projectId && firebaseConfig.projectId.indexOf("PASTE_YOUR") !== 0;
+  }
+
+  /** อัปเดต #28: สร้างสตริงเวลาแบบ ISO 8601 พร้อม offset +07:00 (เวลาไทย) เสมอ ไม่อิงกับ timezone ของเครื่อง/
+   *  เบราว์เซอร์ผู้ใช้ — แทนที่ nowLocalIso_() ที่เดิมรันฝั่ง Apps Script (ใช้ timezone ของสเปรดชีตเป็นตัวตั้งตาม
+   *  อัปเดต #10) ตอนนี้ไม่มีฝั่งเซิร์ฟเวอร์แล้ว จึงคำนวณ offset +7 ชม. ตรงๆ ในฝั่งเว็บแทน รูปแบบสตริงเหมือนเดิมทุก
+   *  ประการ (เช่น "2026-09-25T22:39:04+07:00") โค้ดส่วนอื่นที่ parse/เทียบสตริงนี้อยู่แล้วจึงไม่ต้องแก้อะไรเพิ่ม */
+  function nowLocalIso() {
+    var now = new Date();
+    var thaiMs = now.getTime() + now.getTimezoneOffset() * 60000 + 7 * 60 * 60000;
+    var t = new Date(thaiMs);
+    function p(n) { return n < 10 ? "0" + n : "" + n; }
+    return t.getFullYear() + "-" + p(t.getMonth() + 1) + "-" + p(t.getDate()) + "T" +
+      p(t.getHours()) + ":" + p(t.getMinutes()) + ":" + p(t.getSeconds()) + "+07:00";
   }
 
   /* ---------------- state ---------------- */
@@ -1172,7 +1204,7 @@
     try { localStorage.setItem(key, val); } catch (e) {}
   }
 
-  /* ---------------- Google Sheets (Apps Script) backend ---------------- */
+  /* ---------------- Firebase (Firestore) backend — อัปเดต #28 ---------------- */
   function applyState(s) {
     if (!s) return;
     if (Array.isArray(s.records)) state.records = s.records.map(normalizeStatusValue);
@@ -1219,34 +1251,69 @@
     return { start: start, end: Math.max(start, endShift) };
   }
 
+  /** อัปเดต #28: อ่านข้อมูลทั้งหมดจาก Firestore (records/statusLog/stations/circuits) แล้วประกอบเป็นรูปแบบ
+   *  state object เดียวกันเป๊ะกับที่ Apps Script doGet() เคยส่งกลับมา (json.state) — เพราะรูปแบบเหมือนเดิมทุก
+   *  ประการ โค้ดที่เหลือทั้งหมด (applyState, loadData, ตัว render ทุกจุด) จึงไม่ต้องแก้อะไรเลย */
   async function apiGet() {
-    var url = APPS_SCRIPT_URL + (SHARED_TOKEN ? "?token=" + encodeURIComponent(SHARED_TOKEN) : "");
-    var res = await fetch(url, { method: "GET", cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var text = await res.text();
-    var json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      // อัปเดต #26: Apps Script บางครั้งตอบกลับเป็นหน้า HTML แทน JSON (เช่นติดโควตาการทำงานพร้อมกันชั่วคราว
-      // หรือ deployment ต้อง re-auth ใหม่) — เดิม res.json() จะโยน error กำกวมแบบ "Unexpected token <"
-      // เปลี่ยนเป็น error ที่สื่อสาเหตุชัดเจนกว่า เพื่อให้ console.error ใน loadData() อ่านง่ายขึ้นตอนไล่ปัญหา
-      throw new Error("ได้รับข้อมูลที่ไม่ใช่ JSON จาก Apps Script (อาจติดโควตาการทำงานพร้อมกันชั่วคราว)");
-    }
-    if (!json.ok) throw new Error(json.error || "request failed");
-    return json.state;
+    var recordsSnap = await db.collection("records").get();
+    var statusLogSnap = await db.collection("statusLog").get();
+    var stationsSnap = await db.collection("stations").get();
+    var circuitsSnap = await db.collection("circuits").get();
+    var records = recordsSnap.docs.map(function (d) {
+      var data = d.data(); data.id = d.id; return data;
+    });
+    var statusLog = statusLogSnap.docs.map(function (d) {
+      var data = d.data(); data.id = d.id; return data;
+    });
+    var stations = stationsSnap.docs.map(function (d) { return d.data(); });
+    var circuits = circuitsSnap.docs.map(function (d) { return d.data(); });
+    return { records: records, statusLog: statusLog, stations: stations, circuits: circuits };
   }
 
+  /** อัปเดต #28: แปลง action เดิมทุกชื่อ (จากสมัย Apps Script) เป็นการอ่าน/เขียน Firestore ตรงๆ จาก client
+   *  ไม่มีฝั่งเซิร์ฟเวอร์กลางอีกต่อไป — เขียนเสร็จแล้วอ่าน apiGet() กลับมาใหม่ทั้งชุด คืนค่าเป็น state object
+   *  เดียวกันเป๊ะกับพฤติกรรมเดิมของ Apps Script POST (เพื่อให้ saveAction()/applyState() ที่เรียกใช้ฟังก์ชันนี้
+   *  ไม่ต้องแก้โค้ดเลยแม้แต่บรรทัดเดียว) */
   async function apiPost(action, payload) {
-    var res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      // text/plain avoids a CORS preflight against the Apps Script endpoint
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: action, payload: payload || {}, token: SHARED_TOKEN })
-    });
-    var json = await res.json();
-    if (!json.ok) throw new Error(json.error || "request failed");
-    return json.state;
+    payload = payload || {};
+    var now = nowLocalIso();
+    if (action === "addRecord") {
+      var ref = db.collection("records").doc();
+      await ref.set({
+        date: payload.date, shift: payload.shift, station: payload.station, circuit: payload.circuit,
+        detail: payload.detail, jobType: payload.jobType, status: payload.status,
+        recordedBy: payload.recordedBy || "", createdAt: now, updatedAt: now
+      });
+      await db.collection("statusLog").add({ recordId: ref.id, status: payload.status, at: now, jobType: payload.jobType });
+    } else if (action === "updateRecordStatus") {
+      var recRef = db.collection("records").doc(payload.id);
+      var recSnap = await recRef.get();
+      if (!recSnap.exists) throw new Error("record not found: " + payload.id);
+      await recRef.update({ status: payload.status, updatedAt: now });
+      await db.collection("statusLog").add({ recordId: payload.id, status: payload.status, at: now, jobType: recSnap.data().jobType || "switching" });
+    } else if (action === "updateRecordDetails") {
+      await db.collection("records").doc(payload.id).update({ jobType: payload.jobType, detail: payload.detail, updatedAt: now });
+    } else if (action === "deleteRecord") {
+      var logsSnap = await db.collection("statusLog").where("recordId", "==", payload.id).get();
+      var delBatch = db.batch();
+      logsSnap.docs.forEach(function (d) { delBatch.delete(d.ref); });
+      delBatch.delete(db.collection("records").doc(payload.id));
+      await delBatch.commit();
+    } else if (action === "addStation") {
+      await db.collection("stations").doc(payload.code).set({ code: payload.code, province: payload.province || "" });
+    } else if (action === "removeStation") {
+      await db.collection("stations").doc(payload.code).delete();
+    } else if (action === "addCircuit") {
+      await db.collection("circuits").add({ station: payload.station, voltage: payload.voltage || "", name: payload.name });
+    } else if (action === "removeCircuit") {
+      var circSnap = await db.collection("circuits").where("name", "==", payload.name).get();
+      var circBatch = db.batch();
+      circSnap.docs.forEach(function (d) { circBatch.delete(d.ref); });
+      await circBatch.commit();
+    } else {
+      throw new Error("unknown action: " + action);
+    }
+    return apiGet();
   }
 
   async function loadData(silent) {
@@ -1288,10 +1355,10 @@
     else if (!wasOffline) showToast("โหลดข้อมูลไม่สำเร็จ — ตรวจสอบการเชื่อมต่อ", "error");
   }
 
-  /** ส่ง action ไปบันทึกที่ Google Sheet แล้วอัปเดต state จากผลลัพธ์ล่าสุดที่เซิร์ฟเวอร์ส่งกลับมา */
+  /** ส่ง action ไปบันทึกที่ Firestore แล้วอัปเดต state จากผลลัพธ์ล่าสุดที่อ่านกลับมา */
   async function saveAction(action, payload) {
     if (!isConfigured()) {
-      showToast("ยังไม่ได้ตั้งค่า Google Sheet — ดูขั้นตอนใน AppsScript_Code.gs", "error");
+      showToast("ยังไม่ได้ตั้งค่า Firebase — ดูขั้นตอนใน README_ติดตั้ง.md", "error");
       return { ok: false };
     }
     state.busy = true;
@@ -1312,9 +1379,9 @@
 
   function renderBannerState() {
     if (!isConfigured()) {
-      setBanner("ยังไม่ได้ตั้งค่าปลายทางข้อมูล (Google Sheet) — แก้ค่า APPS_SCRIPT_URL ในไฟล์นี้ก่อนใช้งานจริง ตอนนี้เป็นโหมดออฟไลน์ชั่วคราวเท่านั้น");
+      setBanner("ยังไม่ได้ตั้งค่าปลายทางข้อมูล (Firebase) — แก้ค่า firebaseConfig ในไฟล์นี้ก่อนใช้งานจริง ตอนนี้เป็นโหมดออฟไลน์ชั่วคราวเท่านั้น");
     } else if (state.offline) {
-      setBanner("ไม่สามารถเชื่อมต่อ Google Sheet ได้ในขณะนี้ — จะลองใหม่ให้อัตโนมัติ ข้อมูลที่เห็นอาจไม่ใช่ล่าสุด");
+      setBanner("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ในขณะนี้ — จะลองใหม่ให้อัตโนมัติ ข้อมูลที่เห็นอาจไม่ใช่ล่าสุด");
     } else {
       setBanner("");
     }
@@ -2047,7 +2114,7 @@
   /* ---------------- form submit ---------------- */
   // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน แต่ยังถือเป็น "1 เหตุการณ์" เดียว — บันทึกเป็นแถวเดียวใน Records
   // (ไม่ใช่แยกเหตุการณ์ทีละวงจร) โดยรวมชื่อวงจรที่เลือกไว้ทั้งหมดเป็นสตริงเดียวคั่นด้วย ", " เก็บลงคอลัมน์ circuit เดิม
-  // ยังเป็น action addRecord เดิมทุกประการ ไม่ต้องแก้ AppsScript_Code.gs
+  // ยังเป็น action addRecord เดิมทุกประการ (ฝั่ง apiPost() แปลงเป็นการเขียน Firestore ให้เอง)
   async function handleSubmit(e) {
     e.preventDefault();
     if (!state.selectedShift) { showToast("กรุณาเลือกกะ", "error"); return; }
@@ -2211,7 +2278,8 @@
     renderRecentList();
     renderOverview();
 
-    // อัปเดต #26: near-real-time sync — โพลข้อมูลจาก Google Sheet เป็นระยะขณะแท็บนี้เปิดอยู่
+    // อัปเดต #26: near-real-time sync — โพลข้อมูลจาก Firestore เป็นระยะขณะแท็บนี้เปิดอยู่ (อัปเดต #28: เปลี่ยนจาก
+    // Google Sheet มาเป็น Firestore แล้ว แต่กลไกโพล/retry เดิมยังคงไว้เหมือนเดิมทุกประการ)
     // เดิมใช้ setInterval ตายตัวทุก 8 วิ ถ้าโหลดพลาดครั้งหนึ่ง (เช่น Apps Script ติดโควตาการทำงานพร้อมกันชั่วคราว
     // ตอนมีหลายคนเปิดหน้าเว็บพร้อมกัน) ต้องรอครบรอบ 8 วิเต็มๆ ถึงจะลองใหม่ — ช่องกรอง "ระดับแรงดัน" ได้รับผลกระทบ
     // เห็นชัดที่สุด เพราะดึงมาจาก state.config.circuits ล้วนๆ ไม่มีค่าตั้งต้นสำรอง (ต่างจากช่องสถานีที่มี
