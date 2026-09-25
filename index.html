@@ -33,14 +33,27 @@
     --brand-shield: #3d2705;
     --brand-bolt: #ffedc2;
 
-    --status-moving-out: #b6650b;
-    --status-moving-out-soft: #fbecd7;
-    --status-active: #2455c4;
-    --status-active-soft: #e2ebfd;
-    --status-moving-back: #b6157c;
-    --status-moving-back-soft: #fbe1f0;
+    /* อัปเดต #27 (แก้รอบ 2 — ผู้ใช้แจ้งว่ายังใกล้กันอยู่ ทั้งพื้นหลังการ์ดแบบพาสเทลและโทนสีโดยรวม):
+       - คงสี "ย้ายโหลดคืนแล้วเสร็จ" เป็นเขียวเดิมไว้ตามที่ขอ (ไม่แตะ --status-done / -soft เลย)
+       - เลิกใช้ --status-moving-back เป็นสีแจ้งเตือน/อันตรายของระบบ (ทำให้ถูกบังคับให้อยู่โทนแดง-ชมพูและ
+         ไปชนกับสีสถานะ "กำลังย้ายโหลด" ที่เป็นโทนส้ม/อำพันเช่นกัน) — แยกออกมาเป็นตัวแปรใหม่ --danger / --danger-soft
+         โดยเฉพาะ ทำให้เลือกสี 4 สถานะได้อิสระ กระจายรอบวงล้อสีให้ห่างกันมากที่สุด (เหลือง-ทอง / เขียว / น้ำเงิน / ม่วง)
+         และเลี่ยงโทนสีที่ชนกับป้ายประเภทงาน (--jobtype-switching สีม่วงบานเย็น, --jobtype-repair สีแดง)
+       - เพิ่มความอิ่มตัวของพื้นหลังการ์ดแบบพาสเทล (soft) จากโทนขาวเกือบหมด (L~90-95%) ให้เข้มขึ้นชัดเจน
+         เพื่อให้พื้นหลังการ์ดแต่ละสถานะแยกออกจากกันได้ง่ายแม้มองผ่านๆ ไม่ใช่แยกได้แค่จากตัวหนังสือ/ไอคอนเท่านั้น */
+    --status-moving-out: #ca8a04;
+    --status-moving-out-soft: #fde68a;
+    --status-active: #2563eb;
+    --status-active-soft: #bfdbfe;
+    --status-moving-back: #7c3aed;
+    --status-moving-back-soft: #ddd6fe;
     --status-done: #17842e;
     --status-done-soft: #dff3e2;
+
+    /* สีแจ้งเตือน/อันตรายของระบบ (แยกจากสีสถานะตั้งแต่ #27 รอบ 2) — ใช้กับดาว * ช่องบังคับกรอก, ปุ่มลบ,
+       ไอคอน/ปุ่มยืนยันการลบ, toast แจ้ง error */
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
 
     /* สีประเภทงาน (งาน SWITCHING / งานแก้ไขอุปกรณ์) — จงใจใช้คนละโทนสี (ชมพู-แดงเข้ม vs แดงส้ม) ให้ตัดกันชัดเจน ไม่ใช่แค่เฉดใกล้กัน */
     --jobtype-switching: #a21caf;
@@ -78,14 +91,17 @@
       --gold-soft: #3d3013;
       --gold-ink: #f7e6bd;
 
-      --status-moving-out: #e3a54a;
-      --status-moving-out-soft: #3d2f14;
-      --status-active: #7ea6f7;
+      --status-moving-out: #fbbf24;
+      --status-moving-out-soft: #4a3306;
+      --status-active: #60a5fa;
       --status-active-soft: #1c2c4d;
-      --status-moving-back: #ec7bc4;
-      --status-moving-back-soft: #3d2035;
+      --status-moving-back: #a78bfa;
+      --status-moving-back-soft: #2e1065;
       --status-done: #67d17e;
       --status-done-soft: #1a3320;
+
+      --danger: #f87171;
+      --danger-soft: #4a1212;
 
       --jobtype-switching: #e879f9;
       --jobtype-switching-soft: #451a4d;
@@ -119,14 +135,17 @@
     --gold-soft: #3d3013;
     --gold-ink: #f7e6bd;
 
-    --status-moving-out: #e3a54a;
-    --status-moving-out-soft: #3d2f14;
-    --status-active: #7ea6f7;
+    --status-moving-out: #fbbf24;
+    --status-moving-out-soft: #4a3306;
+    --status-active: #60a5fa;
     --status-active-soft: #1c2c4d;
-    --status-moving-back: #ec7bc4;
-    --status-moving-back-soft: #3d2035;
+    --status-moving-back: #a78bfa;
+    --status-moving-back-soft: #2e1065;
     --status-done: #67d17e;
     --status-done-soft: #1a3320;
+
+    --danger: #f87171;
+    --danger-soft: #4a1212;
 
     --jobtype-switching: #e879f9;
     --jobtype-switching-soft: #451a4d;
@@ -306,7 +325,7 @@
     display: block; font-size: 0.82rem; font-weight: 600;
     color: var(--ink-secondary); margin-bottom: 6px;
   }
-  .field .req { color: var(--status-moving-back); }
+  .field .req { color: var(--danger); }
   .field .field-row { display: flex; gap: 6px; }
   .field input[type="text"], .field input[type="date"], .field select, .field textarea {
     width: 100%;
@@ -615,7 +634,7 @@
   .row-actions { display: flex; gap: 6px; }
   .row-actions select { font-size: 0.78rem; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); }
   .row-actions button { background: transparent; border: none; color: var(--ink-muted); padding: 4px; border-radius: 6px; }
-  .row-actions button:hover { background: var(--surface-3); color: var(--status-moving-back); }
+  .row-actions button:hover { background: var(--surface-3); color: var(--danger); }
   .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-muted); font-size: 0.88rem; }
 
   /* modal */
@@ -640,7 +659,7 @@
   .manage-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface-2); border-radius: 8px; padding: 7px 10px; font-size: 0.83rem; }
   .manage-list li .province { color: var(--ink-muted); font-size: 0.72rem; }
   .manage-list button.remove { background: none; border: none; color: var(--ink-muted); }
-  .manage-list button.remove:hover { color: var(--status-moving-back); }
+  .manage-list button.remove:hover { color: var(--danger); }
   .add-row { display: flex; gap: 6px; }
   .add-row input { flex: 1; }
   .close-btn { background: none; border: none; color: var(--ink-muted); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; }
@@ -677,7 +696,7 @@
     display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
   }
   .confirm-icon svg { width: 22px; height: 22px; }
-  .confirm-icon.danger { background: var(--status-moving-back-soft); color: var(--status-moving-back); }
+  .confirm-icon.danger { background: var(--danger-soft); color: var(--danger); }
   .confirm-title { font-family: "Kanit"; font-size: 1rem; font-weight: 600; margin: 0 0 6px; }
   .confirm-message { font-size: 0.84rem; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 4px; }
   .confirm-message.hidden { display: none; }
@@ -686,7 +705,7 @@
   .confirm-status-change.hidden { display: none; }
   .confirm-actions { display: flex; gap: 10px; margin-top: 6px; }
   .confirm-actions button { flex: 1; justify-content: center; }
-  .btn-primary.btn-danger { background: var(--status-moving-back); }
+  .btn-primary.btn-danger { background: var(--danger); }
   .btn-primary.btn-danger:hover { background: #8a105f; }
 
   .toast-stack { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 60; max-width: 320px; }
@@ -694,7 +713,7 @@
     background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--radius-sm);
     font-size: 0.82rem; box-shadow: var(--shadow-md);
   }
-  .toast.error { background: var(--status-moving-back); color: #fff; }
+  .toast.error { background: var(--danger); color: #fff; }
   .toast.success { background: var(--status-done); color: #fff; }
 
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
