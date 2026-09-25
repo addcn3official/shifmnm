@@ -1012,12 +1012,15 @@
 
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
-<!-- อัปเดต #28: เปลี่ยน backend จาก Google Apps Script + Google Sheet มาเป็น Firebase (Firestore) แทน
+<!-- อัปเดต #28: เปลี่ยน backend จาก Google Apps Script + Google Sheet มาเป็น Firebase Realtime Database แทน
      เพื่อแก้ปัญหาเชื่อมต่อไม่เสถียร/ติด quota ของ Apps Script — โหลด Firebase SDK แบบ compat (ใช้ global `firebase`
      namespace เหมือน SDK รุ่นเก่า) เพื่อให้โค้ดส่วนที่เหลือทั้งไฟล์ (การ render/state management เดิมทั้งหมด)
-     ไม่ต้องแก้โครงสร้างเป็น ES module -->
+     ไม่ต้องแก้โครงสร้างเป็น ES module
+     (เลือก Realtime Database แทน Firestore เพราะแผนฟรีของ RTDB คิดโควตาจากปริมาณข้อมูลที่ดาวน์โหลด (10 GB/เดือน)
+     ไม่ใช่จำนวนรายการที่อ่าน (Firestore 50,000 ครั้ง/วัน) — แอปนี้โหลดข้อมูลทั้งหมดทุกครั้งที่เปิดหน้าเว็บ และ
+     แต่ละรายการสั้นมาก จึงเหมาะกับ RTDB มากกว่าเมื่อข้อมูลสะสมเพิ่มขึ้นเรื่อยๆ) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 
 <script>
 (function () {
@@ -1057,26 +1060,28 @@
 
   /* อัปเดต #28: วางค่า config ของโปรเจกต์ Firebase ตรงนี้ (Firebase Console → Project settings → Your apps →
      เว็บแอป → ก้อนโค้ด firebaseConfig) ค่าพวกนี้เป็นค่าสาธารณะฝั่ง client ใส่ตรงในไฟล์ HTML ได้ตามปกติ ไม่ใช่ความลับ
-     แบบรหัสผ่าน — ความปลอดภัยจริงๆ ควบคุมด้วย Firestore Security Rules (ดู firestore.rules ที่ส่งมาด้วยกัน) */
+     แบบรหัสผ่าน — ความปลอดภัยจริงๆ ควบคุมด้วย Realtime Database Rules (ดู database.rules.json ที่ส่งมาด้วยกัน)
+     databaseURL ต้องตรงกับลิงก์ที่แสดงด้านบนหน้า Realtime Database → Data ใน Firebase Console */
   var firebaseConfig = {
     apiKey: "AIzaSyAcgfxgtAcFQu4dIxqavKVVsZ3TgwoZEIs",
     authDomain: "shifmnm.firebaseapp.com",
     projectId: "shifmnm",
     storageBucket: "shifmnm.firebasestorage.app",
     messagingSenderId: "935885319237",
-    appId: "1:935885319237:web:ca12e2a714623e6ed6872c"
+    appId: "1:935885319237:web:ca12e2a714623e6ed6872c",
+    databaseURL: "https://shifmnm-default-rtdb.asia-southeast1.firebasedatabase.app"
   };
   firebase.initializeApp(firebaseConfig);
-  var db = firebase.firestore();
+  var rtdb = firebase.database();
 
   var POLL_INTERVAL_MS = 8000;
   /* อัปเดต #26: จังหวะลองใหม่เร็วครั้งแรกหลังโหลดพลาด (เพิ่มเป็น 2 เท่าทุกครั้งที่พลาดซ้ำติดกัน จนสูงสุดเท่า POLL_INTERVAL_MS ปกติ)
      — อัปเดต #28: กลไก retry นี้ยังคงไว้เหมือนเดิมทุกประการ เผื่อเครือข่ายสะดุดชั่วคราว แต่จะไม่เจอปัญหา quota/URL
-     redirect แบบที่ Apps Script เคยมีอีกต่อไป เพราะ Firestore SDK จัดการ retry ระดับเครือข่ายในตัวเองอยู่แล้ว */
+     redirect แบบที่ Apps Script เคยมีอีกต่อไป — การโพลนี้แค่ re-render จากข้อมูลในหน่วยความจำ ไม่ได้ดาวน์โหลดซ้ำ */
   var POLL_RETRY_MS = 2000;
 
   function isConfigured() {
-    return !!firebaseConfig.projectId && firebaseConfig.projectId.indexOf("PASTE_YOUR") !== 0;
+    return !!firebaseConfig.databaseURL && firebaseConfig.databaseURL.indexOf("PASTE_YOUR") === -1;
   }
 
   /** อัปเดต #28: สร้างสตริงเวลาแบบ ISO 8601 พร้อม offset +07:00 (เวลาไทย) เสมอ ไม่อิงกับ timezone ของเครื่อง/
@@ -1204,7 +1209,7 @@
     try { localStorage.setItem(key, val); } catch (e) {}
   }
 
-  /* ---------------- Firebase (Firestore) backend — อัปเดต #28 ---------------- */
+  /* ---------------- Firebase Realtime Database backend — อัปเดต #28 ---------------- */
   function applyState(s) {
     if (!s) return;
     if (Array.isArray(s.records)) state.records = s.records.map(normalizeStatusValue);
@@ -1251,65 +1256,149 @@
     return { start: start, end: Math.max(start, endShift) };
   }
 
-  /** อัปเดต #28: อ่านข้อมูลทั้งหมดจาก Firestore (records/statusLog/stations/circuits) แล้วประกอบเป็นรูปแบบ
-   *  state object เดียวกันเป๊ะกับที่ Apps Script doGet() เคยส่งกลับมา (json.state) — เพราะรูปแบบเหมือนเดิมทุก
-   *  ประการ โค้ดที่เหลือทั้งหมด (applyState, loadData, ตัว render ทุกจุด) จึงไม่ต้องแก้อะไรเลย */
-  async function apiGet() {
-    var recordsSnap = await db.collection("records").get();
-    var statusLogSnap = await db.collection("statusLog").get();
-    var stationsSnap = await db.collection("stations").get();
-    var circuitsSnap = await db.collection("circuits").get();
-    var records = recordsSnap.docs.map(function (d) {
-      var data = d.data(); data.id = d.id; return data;
-    });
-    var statusLog = statusLogSnap.docs.map(function (d) {
-      var data = d.data(); data.id = d.id; return data;
-    });
-    var stations = stationsSnap.docs.map(function (d) { return d.data(); });
-    var circuits = circuitsSnap.docs.map(function (d) { return d.data(); });
-    return { records: records, statusLog: statusLog, stations: stations, circuits: circuits };
+  /* อัปเดต #28: ชั้นรับส่งข้อมูลกับ Firebase Realtime Database
+   * โครงสร้างข้อมูลในฐานข้อมูล (เทียบกับชีตเดิม):
+   *   /records/{id}    = 1 แถวของชีต Records   (id เดิมจากชีตใช้เป็น key ต่อ เพื่อให้ประวัติชี้ถูกรายการ)
+   *   /statusLog/{key} = 1 แถวของชีต StatusLog (recordId, status, at, jobType)
+   *   /lists           = { stations: [...], circuits: [...] } รวมชีต Stations + Circuits ไว้ด้วยกัน
+   * การทำงาน:
+   *   - records/statusLog เปิด listener ("value") ค้างไว้: ตอนเปิดหน้าเว็บดาวน์โหลดทั้งหมด 1 ครั้ง หลังจากนั้น Firebase
+   *     ส่งมาเฉพาะส่วนที่เปลี่ยน เก็บไว้ใน rtCache — ทุกเครื่องเห็นข้อมูลใหม่ของกันและกันเองอัตโนมัติ
+   *   - lists (แทบไม่เคยเปลี่ยน) อ่านครั้งเดียวตอนเปิดหน้าเว็บ
+   *   - apiGet() คืนค่าจาก rtCache ในหน่วยความจำ กลไกโพลทุก 8 วิเดิม (#26) จึงแค่ re-render ไม่ได้ดาวน์โหลดซ้ำ
+   *   - คืนรูปแบบ state object เดียวกันเป๊ะกับ json.state ของ Apps Script เดิม โค้ดส่วนอื่นทั้งไฟล์จึงไม่ต้องแก้ */
+  var rtCache = { records: null, statusLog: null, lists: null };
+  var rtReady = null;
+  var rtUnsubs = [];
+  var rtConnected = false, rtEverConnected = false;
+
+  rtdb.ref(".info/connected").on("value", function (snap) {
+    rtConnected = !!snap.val();
+    if (rtConnected) rtEverConnected = true;
+  });
+
+  /** RTDB เก็บ array เป็น object ที่มี key เป็นตัวเลขได้ — แปลงกลับเป็น array เสมอ */
+  function toArray(v) {
+    if (!v) return [];
+    if (Array.isArray(v)) return v.filter(function (x) { return x != null; });
+    return Object.keys(v).map(function (k) { return v[k]; });
   }
 
-  /** อัปเดต #28: แปลง action เดิมทุกชื่อ (จากสมัย Apps Script) เป็นการอ่าน/เขียน Firestore ตรงๆ จาก client
-   *  ไม่มีฝั่งเซิร์ฟเวอร์กลางอีกต่อไป — เขียนเสร็จแล้วอ่าน apiGet() กลับมาใหม่ทั้งชุด คืนค่าเป็น state object
-   *  เดียวกันเป๊ะกับพฤติกรรมเดิมของ Apps Script POST (เพื่อให้ saveAction()/applyState() ที่เรียกใช้ฟังก์ชันนี้
-   *  ไม่ต้องแก้โค้ดเลยแม้แต่บรรทัดเดียว) */
+  /** แปลง snapshot ของ node แบบ {key: {...}} เป็น array ของ object ที่มี id = key */
+  function nodeToList(val) {
+    if (!val) return [];
+    return Object.keys(val).map(function (k) {
+      var o = {};
+      Object.keys(val[k] || {}).forEach(function (f) { o[f] = val[k][f]; });
+      o.id = k;
+      return o;
+    });
+  }
+
+  function stopRealtimeListeners() {
+    rtUnsubs.forEach(function (u) { try { u(); } catch (e) {} });
+    rtUnsubs = [];
+    rtReady = null;
+  }
+
+  /** เปิด listener ของ records/statusLog (ครั้งเดียว) — resolve เมื่อได้ข้อมูลครบทั้งคู่
+   *  ถ้าถูกปฏิเสธ (เช่น rules ไม่อนุญาต) listener จะถูกยกเลิก แล้วรอให้ apiGet() รอบถัดไปเปิดใหม่ */
+  function startRealtimeListeners() {
+    if (rtReady) return rtReady;
+    rtReady = new Promise(function (resolve, reject) {
+      var got = { records: false, statusLog: false };
+      function onErr(err) {
+        console.error("Realtime Database listener error", err);
+        stopRealtimeListeners();
+        reject(err);
+      }
+      ["records", "statusLog"].forEach(function (name) {
+        var ref = rtdb.ref(name);
+        var cb = ref.on("value", function (snap) {
+          rtCache[name] = nodeToList(snap.val());
+          got[name] = true;
+          if (got.records && got.statusLog) resolve();
+        }, onErr);
+        rtUnsubs.push(function () { ref.off("value", cb); });
+      });
+    });
+    return rtReady;
+  }
+
+  function withTimeout(promise, ms) {
+    return Promise.race([promise, new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error("เชื่อมต่อฐานข้อมูลไม่ทันเวลา (" + ms / 1000 + " วิ)")); }, ms);
+    })]);
+  }
+
+  async function loadLists() {
+    if (rtCache.lists) return rtCache.lists;
+    var snap = await rtdb.ref("lists").once("value");
+    var v = snap.val() || {};
+    rtCache.lists = { stations: toArray(v.stations), circuits: toArray(v.circuits) };
+    return rtCache.lists;
+  }
+
+  /** คืนค่า state object รูปแบบเดิมเป๊ะ (เหมือน json.state ของ Apps Script) จากข้อมูลในหน่วยความจำ */
+  async function apiGet() {
+    var lists = await withTimeout(loadLists(), 20000);
+    await withTimeout(startRealtimeListeners(), 20000);
+    // หลุดการเชื่อมต่อระหว่างใช้งาน (เน็ตหลุด) — ข้อมูลในจอยังอยู่ แต่ให้ขึ้นแบนเนอร์เตือนว่าอาจไม่ล่าสุด
+    if (rtEverConnected && !rtConnected) throw new Error("ขาดการเชื่อมต่อกับฐานข้อมูลชั่วคราว");
+    return {
+      records: rtCache.records.slice(),
+      statusLog: rtCache.statusLog.slice(),
+      stations: lists.stations,
+      circuits: lists.circuits
+    };
+  }
+
+  /** แปลง action เดิมทุกชื่อ (จากสมัย Apps Script) เป็นการเขียน Realtime Database ตรงๆ จาก client
+   *  ใช้ multi-path update เขียนรายการ + ประวัติพร้อมกันในคำสั่งเดียว (สำเร็จทั้งคู่หรือไม่สำเร็จทั้งคู่)
+   *  listener อัปเดต rtCache ให้ทันทีที่เขียน จึงคืน apiGet() ได้เลยโดยไม่ต้องดาวน์โหลดซ้ำ */
   async function apiPost(action, payload) {
     payload = payload || {};
     var now = nowLocalIso();
+    var updates = {};
     if (action === "addRecord") {
-      var ref = db.collection("records").doc();
-      await ref.set({
+      var recKey = rtdb.ref("records").push().key;
+      updates["records/" + recKey] = {
         date: payload.date, shift: payload.shift, station: payload.station, circuit: payload.circuit,
         detail: payload.detail, jobType: payload.jobType, status: payload.status,
         recordedBy: payload.recordedBy || "", createdAt: now, updatedAt: now
-      });
-      await db.collection("statusLog").add({ recordId: ref.id, status: payload.status, at: now, jobType: payload.jobType });
+      };
+      updates["statusLog/" + rtdb.ref("statusLog").push().key] = { recordId: recKey, status: payload.status, at: now, jobType: payload.jobType };
+      await rtdb.ref().update(updates);
     } else if (action === "updateRecordStatus") {
-      var recRef = db.collection("records").doc(payload.id);
-      var recSnap = await recRef.get();
-      if (!recSnap.exists) throw new Error("record not found: " + payload.id);
-      await recRef.update({ status: payload.status, updatedAt: now });
-      await db.collection("statusLog").add({ recordId: payload.id, status: payload.status, at: now, jobType: recSnap.data().jobType || "switching" });
+      var cached = (rtCache.records || []).filter(function (r) { return r.id === payload.id; })[0];
+      if (!cached) throw new Error("record not found: " + payload.id);
+      updates["records/" + payload.id + "/status"] = payload.status;
+      updates["records/" + payload.id + "/updatedAt"] = now;
+      updates["statusLog/" + rtdb.ref("statusLog").push().key] = { recordId: payload.id, status: payload.status, at: now, jobType: cached.jobType || "switching" };
+      await rtdb.ref().update(updates);
     } else if (action === "updateRecordDetails") {
-      await db.collection("records").doc(payload.id).update({ jobType: payload.jobType, detail: payload.detail, updatedAt: now });
+      await rtdb.ref("records/" + payload.id).update({ jobType: payload.jobType, detail: payload.detail, updatedAt: now });
     } else if (action === "deleteRecord") {
-      var logsSnap = await db.collection("statusLog").where("recordId", "==", payload.id).get();
-      var delBatch = db.batch();
-      logsSnap.docs.forEach(function (d) { delBatch.delete(d.ref); });
-      delBatch.delete(db.collection("records").doc(payload.id));
-      await delBatch.commit();
-    } else if (action === "addStation") {
-      await db.collection("stations").doc(payload.code).set({ code: payload.code, province: payload.province || "" });
-    } else if (action === "removeStation") {
-      await db.collection("stations").doc(payload.code).delete();
-    } else if (action === "addCircuit") {
-      await db.collection("circuits").add({ station: payload.station, voltage: payload.voltage || "", name: payload.name });
-    } else if (action === "removeCircuit") {
-      var circSnap = await db.collection("circuits").where("name", "==", payload.name).get();
-      var circBatch = db.batch();
-      circSnap.docs.forEach(function (d) { circBatch.delete(d.ref); });
-      await circBatch.commit();
+      updates["records/" + payload.id] = null;
+      (rtCache.statusLog || []).forEach(function (l) {
+        if (l.recordId === payload.id) updates["statusLog/" + l.id] = null;
+      });
+      await rtdb.ref().update(updates);
+    } else if (action === "addStation" || action === "removeStation" || action === "addCircuit" || action === "removeCircuit") {
+      var cur = await loadLists();
+      var next = { stations: cur.stations.slice(), circuits: cur.circuits.slice() };
+      if (action === "addStation") {
+        next.stations = next.stations.filter(function (st) { return st.code !== payload.code; })
+          .concat([{ code: payload.code, province: payload.province || "" }]);
+      } else if (action === "removeStation") {
+        next.stations = next.stations.filter(function (st) { return st.code !== payload.code; });
+      } else if (action === "addCircuit") {
+        next.circuits.push({ station: payload.station, voltage: payload.voltage || "", name: payload.name });
+      } else {
+        next.circuits = next.circuits.filter(function (c) { return c.name !== payload.name; });
+      }
+      await rtdb.ref("lists").set(next);
+      rtCache.lists = next;
     } else {
       throw new Error("unknown action: " + action);
     }
@@ -1355,7 +1444,7 @@
     else if (!wasOffline) showToast("โหลดข้อมูลไม่สำเร็จ — ตรวจสอบการเชื่อมต่อ", "error");
   }
 
-  /** ส่ง action ไปบันทึกที่ Firestore แล้วอัปเดต state จากผลลัพธ์ล่าสุดที่อ่านกลับมา */
+  /** ส่ง action ไปบันทึกที่ Realtime Database แล้วอัปเดต state จากผลลัพธ์ล่าสุด */
   async function saveAction(action, payload) {
     if (!isConfigured()) {
       showToast("ยังไม่ได้ตั้งค่า Firebase — ดูขั้นตอนใน README_ติดตั้ง.md", "error");
@@ -2114,7 +2203,7 @@
   /* ---------------- form submit ---------------- */
   // อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกัน แต่ยังถือเป็น "1 เหตุการณ์" เดียว — บันทึกเป็นแถวเดียวใน Records
   // (ไม่ใช่แยกเหตุการณ์ทีละวงจร) โดยรวมชื่อวงจรที่เลือกไว้ทั้งหมดเป็นสตริงเดียวคั่นด้วย ", " เก็บลงคอลัมน์ circuit เดิม
-  // ยังเป็น action addRecord เดิมทุกประการ (ฝั่ง apiPost() แปลงเป็นการเขียน Firestore ให้เอง)
+  // ยังเป็น action addRecord เดิมทุกประการ (ฝั่ง apiPost() แปลงเป็นการเขียน Realtime Database ให้เอง)
   async function handleSubmit(e) {
     e.preventDefault();
     if (!state.selectedShift) { showToast("กรุณาเลือกกะ", "error"); return; }
@@ -2278,8 +2367,8 @@
     renderRecentList();
     renderOverview();
 
-    // อัปเดต #26: near-real-time sync — โพลข้อมูลจาก Firestore เป็นระยะขณะแท็บนี้เปิดอยู่ (อัปเดต #28: เปลี่ยนจาก
-    // Google Sheet มาเป็น Firestore แล้ว แต่กลไกโพล/retry เดิมยังคงไว้เหมือนเดิมทุกประการ)
+    // อัปเดต #26: near-real-time sync — โพลข้อมูลเป็นระยะขณะแท็บนี้เปิดอยู่ (อัปเดต #28: ย้ายจาก Google Sheet มาเป็น
+    // Realtime Database แล้ว ข้อมูลอัปเดตเข้ามาเองผ่าน listener — รอบโพลนี้แค่ re-render + ตรวจสถานะการเชื่อมต่อ)
     // เดิมใช้ setInterval ตายตัวทุก 8 วิ ถ้าโหลดพลาดครั้งหนึ่ง (เช่น Apps Script ติดโควตาการทำงานพร้อมกันชั่วคราว
     // ตอนมีหลายคนเปิดหน้าเว็บพร้อมกัน) ต้องรอครบรอบ 8 วิเต็มๆ ถึงจะลองใหม่ — ช่องกรอง "ระดับแรงดัน" ได้รับผลกระทบ
     // เห็นชัดที่สุด เพราะดึงมาจาก state.config.circuits ล้วนๆ ไม่มีค่าตั้งต้นสำรอง (ต่างจากช่องสถานีที่มี
