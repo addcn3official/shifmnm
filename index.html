@@ -539,12 +539,14 @@
     background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
   }
   @media (min-width: 860px) {
-    .timeline-grid { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row dense; align-items: start; gap: 10px 14px; }
+    .timeline-grid { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; align-items: start; gap: 10px 14px; }
     .timeline-col-head { display: flex; }
     .timeline-col-head[data-col="1"] { grid-column: 1; }
     .timeline-col-head[data-col="2"] { grid-column: 2; }
     .timeline-col-head[data-col="3"] { grid-column: 3; }
-    .shift-card { grid-column: var(--col-start, auto) / span var(--col-span, 1); }
+    /* อัปเดต #29: การ์ด 1 ใบต่อ 1 แถวเสมอ เรียงตามเวลาบันทึกไล่ลงมาต่อกัน (--row กำหนดจาก JS) — เดิมใช้ grid-auto-flow: dense
+       ทำให้การ์ดที่อยู่คนละกะถูกดันขึ้นไปวางเคียงข้างการ์ดที่บันทึกก่อนหน้า ลำดับเวลาเลยกระโดดไปมาอ่านยาก */
+    .shift-card { grid-column: var(--col-start, auto) / span var(--col-span, 1); grid-row: var(--row, auto); }
     /* อัปเดต #23: เส้นแบ่งแนวตั้งระหว่างกะ 1/2/3 พาดยาวตลอดทั้งคอลัมน์ (ทั้งหัวข้อและแถวการ์ด) ให้เห็นขอบเขตของแต่ละกะชัดเจนขึ้น
        ตำแหน่งคำนวณจากกึ่งกลางช่องว่างระหว่างคอลัมน์ (column-gap 14px) ของกริด 3 คอลัมน์เท่ากัน — ไม่พึ่ง element เสริมใดๆ */
     .timeline-grid:not(.stacked-days)::before,
@@ -1801,7 +1803,7 @@
       if (!todays.length) {
         return headers + '<div class="timeline-empty" style="grid-column:1/-1;">ไม่มีรายการในวันนี้</div>';
       }
-      var cards = todays.map(function (r) {
+      var cards = todays.map(function (r, idx) {
         var isCarryOver = r.date !== dateVal;
         var span, shiftLabel;
         if (isCarryOver) {
@@ -1822,7 +1824,8 @@
         }
         var statusLabel = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
         var jobTypeLabel = (JOB_TYPE_MAP[r.jobType] && JOB_TYPE_MAP[r.jobType].label) || r.jobType;
-        var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';"';
+        // แถวที่ 1 เป็นหัวข้อกะ การ์ดเริ่มแถวที่ 2 ไล่ลงไปทีละแถวตามลำดับเวลาบันทึก (อัปเดต #29)
+        var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';--row:' + (idx + 2) + ';"';
         return '<div class="shift-card' + (isCarryOver ? " shift-card-carryover" : "") + '" data-status="' + esc(r.status) + '" data-jobtype="' + esc(r.jobType) + '" data-id="' + r.id + '" ' + style + '>' +
           '<div class="shift-card-top-row">' +
             '<span class="shift-card-jobtype-chip" data-jobtype="' + esc(r.jobType) + '">' + esc(jobTypeLabel) + "</span>" +
