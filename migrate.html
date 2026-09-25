@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>ย้ายข้อมูลเดิม → Firebase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: "Segoe UI", system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #241a33; }
+  h1 { font-size: 1.3rem; }
+  button { font-size: 1rem; padding: 10px 20px; border-radius: 8px; border: none; background: #6b21a8; color: #fff; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #log { background: #f4eef9; border: 1px solid #e3d9ee; border-radius: 8px; padding: 14px; margin-top: 20px; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; max-height: 60vh; overflow-y: auto; }
+  .warn { color: #b91c1c; font-weight: 600; }
+  .ok { color: #15803d; font-weight: 600; }
+</style>
+</head>
+<body>
+  <h1>เครื่องมือย้ายข้อมูลเดิม (Google Sheet) → Firebase (Firestore)</h1>
+  <p>
+    หน้านี้ใช้ครั้งเดียวตอนย้ายระบบจาก Apps Script + Google Sheet มาเป็น Firebase — ดึงข้อมูลปัจจุบันทั้งหมดจาก
+    Apps Script URL เดิม (ยังใช้อ่านได้ตามปกติแม้จะเลิกใช้เป็น backend หลักแล้ว) แล้วเขียนเข้า Firestore ของโปรเจกต์
+    ใหม่ตามค่า <code>firebaseConfig</code> ด้านล่าง
+  </p>
+  <p class="warn">⚠️ ก่อนกดปุ่ม ตรวจสอบว่าใส่ค่า firebaseConfig ถูกต้องแล้ว (คัดลอกจากไฟล์ index.html ตัวเดียวกับที่ใช้จริง) และรันหน้านี้ "ครั้งเดียวเท่านั้น" — รันซ้ำจะสร้างข้อมูลซ้ำในส่วน statusLog/circuits (ส่วน records/stations จะเขียนทับด้วย id เดิมอย่างปลอดภัย ไม่ซ้ำ)</p>
+
+  <button id="startBtn">เริ่มย้ายข้อมูล</button>
+  <div id="log"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ใส่ URL ของ Apps Script เดิม (ตัวเดียวกับที่เคยอยู่ใน APPS_SCRIPT_URL ของ index.html เวอร์ชันก่อนอัปเดต #28) */
+  var OLD_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJUh7B8r16L9DtB1m-yc7hRbpQeM_k8fkzgdurn67JrFAgCzTmIqUm84WTWnn_9AlRFg/exec";
+
+  /* ใส่ค่าเดียวกับ firebaseConfig ใน index.html เวอร์ชันใหม่ */
+  var firebaseConfig = {
+    apiKey: "AIzaSyAcgfxgtAcFQu4dIxqavKVVsZ3TgwoZEIs",
+    authDomain: "shifmnm.firebaseapp.com",
+    projectId: "shifmnm",
+    storageBucket: "shifmnm.firebasestorage.app",
+    messagingSenderId: "935885319237",
+    appId: "1:935885319237:web:ca12e2a714623e6ed6872c"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+
+  var logEl = document.getElementById("log");
+  function log(msg, cls) {
+    var line = document.createElement("div");
+    if (cls) line.className = cls;
+    line.textContent = msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  document.getElementById("startBtn").addEventListener("click", async function () {
+    var btn = this;
+    btn.disabled = true;
+    logEl.innerHTML = "";
+
+    if (firebaseConfig.projectId.indexOf("PASTE_YOUR") === 0) {
+      log("ยังไม่ได้ใส่ค่า firebaseConfig ในไฟล์นี้ — แก้ก่อนแล้วลองใหม่", "warn");
+      btn.disabled = false;
+      return;
+    }
+
+    try {
+      log("กำลังตรวจสอบว่า Firestore มีข้อมูลอยู่แล้วหรือไม่...");
+      var existing = await db.collection("records").limit(1).get();
+      if (!existing.empty) {
+        var proceed = confirm("พบว่า Firestore มีข้อมูลใน records อยู่แล้ว รันซ้ำอาจทำให้ statusLog/circuits ซ้ำซ้อน ต้องการดำเนินการต่อหรือไม่?");
+        if (!proceed) { log("ยกเลิกโดยผู้ใช้", "warn"); btn.disabled = false; return; }
+      }
+
+      log("กำลังดึงข้อมูลเดิมจาก Apps Script...");
+      var res = await fetch(OLD_APPS_SCRIPT_URL, { method: "GET", cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var json = JSON.parse(await res.text());
+      if (!json.ok) throw new Error(json.error || "โหลดข้อมูลเดิมไม่สำเร็จ");
+      var s = json.state;
+      log("ดึงข้อมูลเดิมสำเร็จ: " + (s.records || []).length + " รายการ, " +
+        (s.statusLog || []).length + " ประวัติ, " + (s.stations || []).length + " สถานี, " +
+        (s.circuits || []).length + " วงจร");
+
+      log("กำลังเขียนสถานี (" + (s.stations || []).length + " รายการ)...");
+      var stationBatch = db.batch();
+      (s.stations || []).forEach(function (st) {
+        stationBatch.set(db.collection("stations").doc(st.code), { code: st.code, province: st.province || "" });
+      });
+      await stationBatch.commit();
+      log("เขียนสถานีเสร็จแล้ว", "ok");
+
+      log("กำลังเขียนวงจร (" + (s.circuits || []).length + " รายการ)...");
+      var circuitChunks = chunk(s.circuits || [], 400);
+      for (var ci = 0; ci < circuitChunks.length; ci++) {
+        var cb = db.batch();
+        circuitChunks[ci].forEach(function (c) {
+          cb.set(db.collection("circuits").doc(), { station: c.station, voltage: c.voltage || "", name: c.name });
+        });
+        await cb.commit();
+      }
+      log("เขียนวงจรเสร็จแล้ว", "ok");
+
+      log("กำลังเขียนรายการบันทึกกะ (" + (s.records || []).length + " รายการ) — ใช้ id เดิมเพื่อให้ประวัติเชื่อมโยงถูกต้อง...");
+      var recordChunks = chunk(s.records || [], 400);
+      for (var ri = 0; ri < recordChunks.length; ri++) {
+        var rb = db.batch();
+        recordChunks[ri].forEach(function (r) {
+          var data = {};
+          Object.keys(r).forEach(function (k) { if (k !== "id") data[k] = r[k]; });
+          rb.set(db.collection("records").doc(r.id), data);
+        });
+        await rb.commit();
+      }
+      log("เขียนรายการบันทึกกะเสร็จแล้ว", "ok");
+
+      log("กำลังเขียนประวัติการเปลี่ยนสถานะ (" + (s.statusLog || []).length + " รายการ)...");
+      var logChunks = chunk(s.statusLog || [], 400);
+      for (var li = 0; li < logChunks.length; li++) {
+        var lb = db.batch();
+        logChunks[li].forEach(function (l) {
+          lb.set(db.collection("statusLog").doc(), { recordId: l.recordId, status: l.status, at: l.at, jobType: l.jobType || "switching" });
+        });
+        await lb.commit();
+      }
+      log("เขียนประวัติการเปลี่ยนสถานะเสร็จแล้ว", "ok");
+
+      log("ย้ายข้อมูลเสร็จสมบูรณ์! เปิด index.html เวอร์ชันใหม่เพื่อตรวจสอบข้อมูลได้เลย", "ok");
+    } catch (err) {
+      console.error(err);
+      log("เกิดข้อผิดพลาด: " + (err && err.message ? err.message : String(err)), "warn");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function chunk(arr, size) {
+    var out = [];
+    for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+})();
+</script>
+</body>
+</html>
