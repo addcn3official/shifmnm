@@ -576,6 +576,16 @@
   .timeline-detail { font-size: 0.78rem; color: var(--ink-secondary); }
   .timeline-empty { color: var(--ink-muted); font-size: 0.82rem; padding: 6px 0; }
   .timeline-grid.stacked-days { grid-template-columns: 1fr; gap: 22px; }
+  /* อัปเดต #30: ไทม์ไลน์ยาวเกินไปหลังเรียงการ์ด 1 ใบต่อแถว (#29) — จำกัดความสูงแล้วเลื่อนดูด้วยสกรอลเม้าส์แทน (เฉพาะจอคอม
+     บนมือถือการ์ดเรียงเป็นแถวเดียวอยู่แล้ว ใช้การเลื่อนหน้าเว็บปกติดีกว่ากล่องสกรอลซ้อน) หัวข้อ กะ 1/2/3 ย้ายออกมาไว้
+     นอกกล่องสกรอล (#timelineHead) จึงยังเห็นอยู่ตลอดเวลาที่เลื่อนดูการ์ดด้านล่าง */
+  .timeline-head { display: none; }
+  @media (min-width: 860px) {
+    /* scrollbar-gutter: stable ทั้งสองกล่อง = เว้นที่ความกว้างเท่าแถบสกรอลเท่ากัน คอลัมน์หัวข้อกะจึงตรงกับคอลัมน์การ์ดพอดี */
+    .timeline-head:not(.hidden) { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 14px; margin-top: 4px; overflow-y: hidden; scrollbar-gutter: stable; }
+    .timeline-head .timeline-col-head { grid-row: auto; }
+    .timeline-scroll { max-height: 640px; overflow-y: auto; scrollbar-gutter: stable; }
+  }
   .timeline-day-group + .timeline-day-group { padding-top: 18px; border-top: 1px dashed var(--border); }
   .timeline-day-heading {
     font-family: "Kanit"; font-weight: 600; font-size: 0.9rem; color: var(--ink);
@@ -632,7 +642,20 @@
   tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--surface-2); }
-  .cell-detail { max-width: 260px; }
+  /* อัปเดต #31: ขยายช่อง "รายละเอียด" ให้กว้างขึ้น (เดิมจำกัดไว้ 260px ทำให้ข้อความยาวตัดขึ้นบรรทัดใหม่หลายบรรทัด แถวสูงเกินไป
+     ขณะที่ช่องวงจรกลับเหลือที่ว่างเยอะ) — คอลัมน์อื่นทั้งหมดหดเหลือเท่าที่เนื้อหาต้องใช้ (width: 1%) ที่เหลือยกให้ช่องรายละเอียดทั้งหมด
+     ช่องวงจรแสดงวงจรละ 1 บรรทัด ไม่ตัดกลางชื่อวงจรตรงขีด (-) — จอแคบกว่าตารางจะเลื่อนซ้าย-ขวาแทนการบีบช่องรายละเอียด */
+  .table-wrap table { min-width: 1000px; }
+  .table-wrap th, .table-wrap td { width: 1%; }
+  .table-wrap th:nth-child(1), .table-wrap td:nth-child(1),
+  .table-wrap th:nth-child(2), .table-wrap td:nth-child(2),
+  .table-wrap th:nth-child(3), .table-wrap td:nth-child(3),
+  .table-wrap th:nth-child(6), .table-wrap td:nth-child(6),
+  .table-wrap th:nth-child(7), .table-wrap td:nth-child(7) { white-space: nowrap; }
+  .table-wrap .circuit-name { white-space: nowrap; }
+  .table-wrap th:nth-child(5), .table-wrap td.cell-detail { width: auto; min-width: 260px; }
+  .table-wrap th, .table-wrap td { padding-left: 10px; padding-right: 10px; }
+  .table-wrap td:nth-child(8) { min-width: 70px; }
   .row-actions { display: flex; gap: 6px; }
   .row-actions select { font-size: 0.78rem; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); }
   .row-actions button { background: transparent; border: none; color: var(--ink-muted); padding: 4px; border-radius: 6px; }
@@ -899,7 +922,8 @@
     <div class="card card-pad" style="margin-top:16px;">
       <div class="section-title"><span class="dot"></span><h2 style="font-size:1rem;">ไทม์ไลน์ตามกะ</h2></div>
       <p class="section-sub" id="timelineSub">เรียงตามเวลาบันทึกภายในแต่ละกะ</p>
-      <div class="timeline-grid" id="timelineGrid"></div>
+      <div class="timeline-head hidden" id="timelineHead"></div>
+      <div class="timeline-scroll" id="timelineScroll"><div class="timeline-grid" id="timelineGrid"></div></div>
     </div>
 
     <div class="card card-pad" style="margin-top:16px;">
@@ -1784,10 +1808,16 @@
      *  (เดิมการ์ดผูกอยู่กับ "วันที่บันทึก" ของมันเท่านั้น พอวันเปลี่ยนรายการค้างจะหายไปจากหน้าวันนี้ทันที)
      *  ถ้าปรับเป็น "เสร็จ" ระหว่างที่กำลังแสดงอยู่ (วันที่ปรับตรงกับ dateVal ที่ดูอยู่) ให้ยังคงแสดงต่อในวันนั้นด้วย
      *  (ไม่ใช่หายไปจากไทม์ไลน์ทันทีที่กดเสร็จ — จะหายไปก็ต่อเมื่อข้ามไปดูวันถัดๆ ไปแล้วเท่านั้น) */
-    function shiftColumnsHtml(dateVal, includeCarryOver) {
-      var headers = SHIFT_DEFS.map(function (s) {
+    function shiftHeadersHtml() {
+      return SHIFT_DEFS.map(function (s) {
         return '<div class="timeline-col-head" data-col="' + s.key + '">' + s.label + '<span class="time-range">' + s.range + "</span></div>";
       }).join("");
+    }
+
+    /** separateHeaders = true (มุมมอง "วันนี้"): หัวข้อกะแสดงแยกไว้ใน #timelineHead นอกกล่องสกรอล ไม่ใส่ในกริดนี้ (อัปเดต #30) */
+    function shiftColumnsHtml(dateVal, includeCarryOver, separateHeaders) {
+      var headers = separateHeaders ? "" : shiftHeadersHtml();
+      var firstRow = separateHeaders ? 1 : 2;
       var owned = records.filter(function (r) { return r.date === dateVal; });
       var carried = includeCarryOver
         ? records.filter(function (r) {
@@ -1824,8 +1854,8 @@
         }
         var statusLabel = (STATUS_MAP[r.status] && STATUS_MAP[r.status].label) || r.status;
         var jobTypeLabel = (JOB_TYPE_MAP[r.jobType] && JOB_TYPE_MAP[r.jobType].label) || r.jobType;
-        // แถวที่ 1 เป็นหัวข้อกะ การ์ดเริ่มแถวที่ 2 ไล่ลงไปทีละแถวตามลำดับเวลาบันทึก (อัปเดต #29)
-        var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';--row:' + (idx + 2) + ';"';
+        // การ์ดไล่ลงไปทีละแถวตามลำดับเวลาบันทึก (อัปเดต #29) — ถ้าหัวข้อกะอยู่ในกริดเดียวกัน (แถว 1) การ์ดเริ่มแถว 2
+        var style = 'style="--col-start:' + span.start + ';--col-span:' + (span.end - span.start + 1) + ';--row:' + (idx + firstRow) + ';"';
         return '<div class="shift-card' + (isCarryOver ? " shift-card-carryover" : "") + '" data-status="' + esc(r.status) + '" data-jobtype="' + esc(r.jobType) + '" data-id="' + r.id + '" ' + style + '>' +
           '<div class="shift-card-top-row">' +
             '<span class="shift-card-jobtype-chip" data-jobtype="' + esc(r.jobType) + '">' + esc(jobTypeLabel) + "</span>" +
@@ -1843,7 +1873,9 @@
     if (!hasRangeFilter) {
       // ไม่ได้เลือกช่วงวันที่ — แสดงของวันนี้ + รายการค้างจากวันก่อนหน้าที่ยังไม่เสร็จ (ดูคอมเมนต์ที่ shiftColumnsHtml)
       timelineGridEl.classList.remove("stacked-days");
-      timelineGridEl.innerHTML = shiftColumnsHtml(today, true);
+      $("timelineHead").innerHTML = shiftHeadersHtml();
+      $("timelineHead").classList.remove("hidden");
+      timelineGridEl.innerHTML = shiftColumnsHtml(today, true, true);
       $("timelineSub").textContent = "วันที่ " + fmtDateThai(today) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
       return;
     }
@@ -1854,6 +1886,7 @@
     var dates = Object.keys(seen).sort();
 
     timelineGridEl.classList.add("stacked-days");
+    $("timelineHead").classList.add("hidden");
     timelineGridEl.innerHTML = dates.length ? dates.map(function (d) {
       return '<div class="timeline-day-group">' +
         '<div class="timeline-day-heading">' + fmtDateThai(d) + "</div>" +
@@ -1903,7 +1936,7 @@
         '<td><div class="tabular">' + fmtDateThai(r.date) + "</div><div class=\"meta\" style=\"color:var(--ink-muted);font-size:.72rem;\">" + fmtTime(r.createdAt) + "</div></td>" +
         "<td>กะ " + esc(r.shift) + "</td>" +
         "<td>" + esc(r.station) + "</td>" +
-        "<td>" + esc(r.circuit) + "</td>" +
+        "<td>" + String(r.circuit || "").split(/,\s*/).map(function (c) { return '<span class="circuit-name">' + esc(c) + "</span>"; }).join(",<br>") + "</td>" +
         '<td class="cell-detail">' + esc(r.detail) + "</td>" +
         "<td>" + jobTypePillHtml(r.jobType) + "</td>" +
         "<td>" + statusPillHtml(r.status) + "</td>" +
