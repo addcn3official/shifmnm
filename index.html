@@ -1357,12 +1357,26 @@
     })]);
   }
 
-  async function loadLists() {
-    if (rtCache.lists) return rtCache.lists;
-    var snap = await rtdb.ref("lists").once("value");
-    var v = snap.val() || {};
-    rtCache.lists = { stations: toArray(v.stations), circuits: toArray(v.circuits) };
-    return rtCache.lists;
+  /** อัปเดต #32: รายชื่อสถานี/วงจร (/lists) เปิด listener ค้างไว้เหมือน records — เดิมอ่านครั้งเดียวตอนเปิดหน้าเว็บ
+   *  ทำให้หลังซิงก์วงจรใหม่จาก Google Sheet (sync-lists.html) แท็บที่เปิดค้างอยู่ต้องกด F5 ก่อนถึงจะเห็น
+   *  ตอนนี้ Firebase ส่งรายชื่อใหม่มาให้เองทันทีที่เปลี่ยน แล้วรอบโพลถัดไป (ไม่เกิน 8 วิ) จะ render ตัวเลือกใหม่ให้
+   *  (ดาวน์โหลดเฉพาะตอนรายชื่อเปลี่ยนจริง ซึ่งนานๆ ครั้ง — ไม่กินโควตาตอนเปิดค้างไว้) */
+  var listsReady = null;
+  function loadLists() {
+    // คืน rtCache.lists ปัจจุบันเสมอ (ไม่ใช่ค่าที่ promise ได้ตอน resolve ครั้งแรก) เพราะ listener เปลี่ยน object ใหม่ทุกครั้งที่อัปเดต
+    if (listsReady) return listsReady.then(function () { return rtCache.lists; });
+    listsReady = new Promise(function (resolve, reject) {
+      rtdb.ref("lists").on("value", function (snap) {
+        var v = snap.val() || {};
+        rtCache.lists = { stations: toArray(v.stations), circuits: toArray(v.circuits) };
+        resolve(rtCache.lists);
+      }, function (err) {
+        console.error("Realtime Database lists listener error", err);
+        listsReady = null;
+        reject(err);
+      });
+    });
+    return listsReady.then(function () { return rtCache.lists; });
   }
 
   /** คืนค่า state object รูปแบบเดิมเป๊ะ (เหมือน json.state ของ Apps Script) จากข้อมูลในหน่วยความจำ */
