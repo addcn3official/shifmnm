@@ -3,157 +3,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
 <style>
-  /* ============ Tokens ============ */
+  /* =====================================================================
+     อัปเดต #33: ออกแบบหน้าตาใหม่ทั้งหมดเป็นสไตล์ "จอห้องควบคุม"
+     - ธีมมืดเป็นค่าเริ่มต้น (สลับเป็นสว่างได้ที่ปุ่มบนหัวเว็บ จำค่าไว้ในเครื่อง)
+     - ม่วง-ทอง กฟภ. ใช้เป็นสีเน้นเท่านั้น (แถบบนสุด ปุ่มหลัก กะปัจจุบัน) ไม่ทาพื้นหลังทั้งหน้า
+     - สีมีความหมายเท่านั้น: สีของ 4 สถานะ (ชุดเดียวกับอัปเดต #27) + สีประเภทงาน + แดงแจ้งเตือน
+     - รหัสสถานี/วงจร เวลา ตัวเลข ใช้ฟอนต์ monospace อ่านเทียบกันง่ายแบบจอ SCADA
+     - ตัดของตกแต่ง: ไม่มีไล่สี เงาฟุ้ง มุมโค้งมาก จุดหน้าหัวข้อ หรือคำอธิบายยืดยาว
+     ===================================================================== */
   :root {
-    --bg: #faf8fc;
-    --surface: #ffffff;
-    --surface-2: #f4eef9;
-    --surface-3: #ede3f5;
-    --border: #e3d9ee;
-    --border-strong: #cdbbe0;
-    --ink: #241a33;
-    --ink-secondary: #5b5169;
-    --ink-muted: #8d84a0;
-    --ink-on-accent: #fdfaff;
+    color-scheme: dark;
+    --bg: #0e1116;
+    --surface: #151a21;
+    --surface-2: #1b212a;
+    --surface-3: #242b36;
+    --field: #0f1318;
+    --border: #262e39;
+    --border-strong: #38424f;
+    --ink: #e7eaf0;
+    --ink-secondary: #a7b0bd;
+    --ink-muted: #707b8a;
+    --ink-on-accent: #ffffff;
 
-    --accent: #4b2574;
-    --accent-strong: #33165a;
-    --accent-soft: #ede3f7;
-    --accent-ring: rgba(75, 37, 116, 0.35);
+    --accent: #a77ee0;          /* ม่วง กฟภ. (ปรับให้อ่านออกบนพื้นมืด) */
+    --accent-strong: #c2a3ee;
+    --accent-fill: #7442b4;     /* พื้นปุ่มหลัก */
+    --accent-fill-hover: #8452c6;
+    --accent-soft: rgba(167, 126, 224, 0.14);
+    --accent-ring: rgba(167, 126, 224, 0.4);
 
-    --gold: #c9820f;
-    --gold-strong: #a6690a;
-    --gold-soft: #fbecce;
-    --gold-ink: #4a2f05;
+    --gold: #f2b631;            /* ทอง กฟภ. — ใช้บอก "ตอนนี้" (กะปัจจุบัน) และคำเตือน */
+    --gold-ink: #1d1503;
+    --gold-soft: rgba(242, 182, 49, 0.12);
 
-    /* สีตราสัญลักษณ์ (โล่+สายฟ้า) — ตรึงค่าคงที่ ไม่สลับตามโหมดสว่าง/มืด กันคอนทราสต์ภายในไอคอนตกในโหมดมืด */
     --brand-shield: #3d2705;
     --brand-bolt: #ffedc2;
 
-    /* อัปเดต #27 (แก้รอบ 2 — ผู้ใช้แจ้งว่ายังใกล้กันอยู่ ทั้งพื้นหลังการ์ดแบบพาสเทลและโทนสีโดยรวม):
-       - คงสี "ย้ายโหลดคืนแล้วเสร็จ" เป็นเขียวเดิมไว้ตามที่ขอ (ไม่แตะ --status-done / -soft เลย)
-       - เลิกใช้ --status-moving-back เป็นสีแจ้งเตือน/อันตรายของระบบ (ทำให้ถูกบังคับให้อยู่โทนแดง-ชมพูและ
-         ไปชนกับสีสถานะ "กำลังย้ายโหลด" ที่เป็นโทนส้ม/อำพันเช่นกัน) — แยกออกมาเป็นตัวแปรใหม่ --danger / --danger-soft
-         โดยเฉพาะ ทำให้เลือกสี 4 สถานะได้อิสระ กระจายรอบวงล้อสีให้ห่างกันมากที่สุด (เหลือง-ทอง / เขียว / น้ำเงิน / ม่วง)
-         และเลี่ยงโทนสีที่ชนกับป้ายประเภทงาน (--jobtype-switching สีม่วงบานเย็น, --jobtype-repair สีแดง)
-       - เพิ่มความอิ่มตัวของพื้นหลังการ์ดแบบพาสเทล (soft) จากโทนขาวเกือบหมด (L~90-95%) ให้เข้มขึ้นชัดเจน
-         เพื่อให้พื้นหลังการ์ดแต่ละสถานะแยกออกจากกันได้ง่ายแม้มองผ่านๆ ไม่ใช่แยกได้แค่จากตัวหนังสือ/ไอคอนเท่านั้น */
-    --status-moving-out: #ca8a04;
-    --status-moving-out-soft: #fde68a;
+    /* สี 4 สถานะ — ชุดเดียวกับอัปเดต #27 (เหลืองทอง / น้ำเงิน / ม่วง / เขียว) */
+    --status-moving-out: #fbbf24;
+    --status-moving-out-soft: #302610;
+    --status-active: #60a5fa;
+    --status-active-soft: #13283f;
+    --status-moving-back: #a78bfa;
+    --status-moving-back-soft: #251d42;
+    --status-done: #67d17e;
+    --status-done-soft: #142c1b;
+
+    --danger: #f26b6b;
+    --danger-soft: rgba(242, 107, 107, 0.14);
+
+    --jobtype-switching: #e879f9;
+    --jobtype-switching-soft: rgba(232, 121, 249, 0.12);
+    --jobtype-repair: #f87171;
+    --jobtype-repair-soft: rgba(248, 113, 113, 0.12);
+
+    --font-ui: "IBM Plex Sans Thai", "Noto Sans Thai", "Leelawadee UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, "IBM Plex Sans Thai", monospace;
+    --radius: 3px;
+    --radius-lg: 4px;
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.5);
+    --page-w: 1440px;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #eef0f3;
+    --surface: #ffffff;
+    --surface-2: #f6f7f9;
+    --surface-3: #e9ecf0;
+    --field: #ffffff;
+    --border: #dde1e7;
+    --border-strong: #c3cad3;
+    --ink: #161b22;
+    --ink-secondary: #485160;
+    --ink-muted: #788291;
+
+    --accent: #6b36a8;
+    --accent-strong: #542987;
+    --accent-fill: #6b36a8;
+    --accent-fill-hover: #5c2c94;
+    --accent-soft: rgba(107, 54, 168, 0.09);
+    --accent-ring: rgba(107, 54, 168, 0.3);
+
+    --gold: #b77806;
+    --gold-ink: #ffffff;
+    --gold-soft: #fdf3dc;
+
+    --status-moving-out: #b47b04;
+    --status-moving-out-soft: #fbefc8;
     --status-active: #2563eb;
-    --status-active-soft: #bfdbfe;
+    --status-active-soft: #dbe7fd;
     --status-moving-back: #7c3aed;
-    --status-moving-back-soft: #ddd6fe;
+    --status-moving-back-soft: #ebe3fd;
     --status-done: #17842e;
-    --status-done-soft: #dff3e2;
+    --status-done-soft: #dbf1e0;
 
-    /* สีแจ้งเตือน/อันตรายของระบบ (แยกจากสีสถานะตั้งแต่ #27 รอบ 2) — ใช้กับดาว * ช่องบังคับกรอก, ปุ่มลบ,
-       ไอคอน/ปุ่มยืนยันการลบ, toast แจ้ง error */
-    --danger: #dc2626;
-    --danger-soft: #fee2e2;
+    --danger: #d12f2f;
+    --danger-soft: #fde4e4;
 
-    /* สีประเภทงาน (งาน SWITCHING / งานแก้ไขอุปกรณ์) — จงใจใช้คนละโทนสี (ชมพู-แดงเข้ม vs แดงส้ม) ให้ตัดกันชัดเจน ไม่ใช่แค่เฉดใกล้กัน */
     --jobtype-switching: #a21caf;
     --jobtype-switching-soft: #fae8ff;
     --jobtype-repair: #dc2626;
     --jobtype-repair-soft: #fee2e2;
 
-    --shadow-sm: 0 1px 2px rgba(38, 20, 61, 0.06), 0 1px 1px rgba(38, 20, 61, 0.04);
-    --shadow-md: 0 8px 24px rgba(38, 20, 61, 0.10), 0 2px 6px rgba(38, 20, 61, 0.06);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 18px;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #180f24;
-      --surface: #221733;
-      --surface-2: #2a1d3d;
-      --surface-3: #332448;
-      --border: #3c2c53;
-      --border-strong: #4d3968;
-      --ink: #f3eefa;
-      --ink-secondary: #cabfdd;
-      --ink-muted: #948aad;
-      --ink-on-accent: #fdfaff;
-
-      --accent: #c4a2ea;
-      --accent-strong: #a97ee0;
-      --accent-soft: #33244a;
-      --accent-ring: rgba(196, 162, 234, 0.4);
-
-      --gold: #f0bd52;
-      --gold-strong: #f5cd7e;
-      --gold-soft: #3d3013;
-      --gold-ink: #f7e6bd;
-
-      --status-moving-out: #fbbf24;
-      --status-moving-out-soft: #4a3306;
-      --status-active: #60a5fa;
-      --status-active-soft: #1c2c4d;
-      --status-moving-back: #a78bfa;
-      --status-moving-back-soft: #2e1065;
-      --status-done: #67d17e;
-      --status-done-soft: #1a3320;
-
-      --danger: #f87171;
-      --danger-soft: #4a1212;
-
-      --jobtype-switching: #e879f9;
-      --jobtype-switching-soft: #451a4d;
-      --jobtype-repair: #f87171;
-      --jobtype-repair-soft: #4a1212;
-
-      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --bg: #180f24;
-    --surface: #221733;
-    --surface-2: #2a1d3d;
-    --surface-3: #332448;
-    --border: #3c2c53;
-    --border-strong: #4d3968;
-    --ink: #f3eefa;
-    --ink-secondary: #cabfdd;
-    --ink-muted: #948aad;
-    --ink-on-accent: #fdfaff;
-
-    --accent: #c4a2ea;
-    --accent-strong: #a97ee0;
-    --accent-soft: #33244a;
-    --accent-ring: rgba(196, 162, 234, 0.4);
-
-    --gold: #f0bd52;
-    --gold-strong: #f5cd7e;
-    --gold-soft: #3d3013;
-    --gold-ink: #f7e6bd;
-
-    --status-moving-out: #fbbf24;
-    --status-moving-out-soft: #4a3306;
-    --status-active: #60a5fa;
-    --status-active-soft: #1c2c4d;
-    --status-moving-back: #a78bfa;
-    --status-moving-back-soft: #2e1065;
-    --status-done: #67d17e;
-    --status-done-soft: #1a3320;
-
-    --danger: #f87171;
-    --danger-soft: #4a1212;
-
-    --jobtype-switching: #e879f9;
-    --jobtype-switching-soft: #451a4d;
-    --jobtype-repair: #f87171;
-    --jobtype-repair-soft: #4a1212;
-
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
+    --shadow-pop: 0 12px 32px rgba(15, 23, 42, 0.18);
   }
 
   /* ============ Base ============ */
@@ -162,489 +118,433 @@
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: "Noto Sans Thai", "Noto Sans", system-ui, sans-serif;
-    font-size: 15px;
-    line-height: 1.55;
+    font-family: var(--font-ui);
+    font-size: 14.5px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, .display {
-    font-family: "Kanit", "Noto Sans Thai", sans-serif;
-    font-weight: 600;
-    text-wrap: balance;
-    margin: 0;
-  }
-  ::selection { background: var(--accent-soft); }
+  h1, h2, h3 { font-family: var(--font-ui); margin: 0; font-weight: 600; }
+  ::selection { background: var(--accent-ring); }
   button, input, select, textarea { font: inherit; color: inherit; }
   button { cursor: pointer; }
   a { color: var(--accent); }
-  .tabular { font-variant-numeric: tabular-nums; }
-  :focus-visible {
-    outline: 2px solid var(--accent-strong);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
+  .tabular, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
 
-  /* ============ Shell ============ */
+  /* ไฟสถานะ (LED) — ใช้แทนไอคอนในทุกจุดที่บอกสถานะ */
+  .led {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none;
+    background: var(--led, var(--ink-muted));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--led, var(--ink-muted)) 22%, transparent);
+  }
+  [data-status="moving_out"] { --led: var(--status-moving-out); --st: var(--status-moving-out); --st-soft: var(--status-moving-out-soft); }
+  [data-status="active"] { --led: var(--status-active); --st: var(--status-active); --st-soft: var(--status-active-soft); }
+  [data-status="moving_back"] { --led: var(--status-moving-back); --st: var(--status-moving-back); --st-soft: var(--status-moving-back-soft); }
+  [data-status="done"] { --led: var(--status-done); --st: var(--status-done); --st-soft: var(--status-done-soft); }
+  [data-jobtype="switching"] { --jt: var(--jobtype-switching); --jt-soft: var(--jobtype-switching-soft); }
+  [data-jobtype="repair"] { --jt: var(--jobtype-repair); --jt-soft: var(--jobtype-repair-soft); }
+
+  /* ============ Header ============ */
   .app-header {
-    background: linear-gradient(135deg, var(--accent-strong), var(--accent) 70%);
-    color: var(--ink-on-accent);
-    padding: 18px clamp(14px, 4vw, 32px) 0;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    box-shadow: var(--shadow-md);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  /* แถบบนสุด ม่วง-ทอง = สีองค์กร กฟภ. (ใช้แค่ตรงนี้ ไม่ทาทั้งหัวเว็บ) */
+  .app-header::before {
+    content: ""; display: block; height: 3px;
+    background: linear-gradient(90deg, var(--accent-fill) 0 82%, var(--gold) 82% 100%);
   }
   .header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-    padding-bottom: 16px;
-    max-width: 1180px;
-    margin: 0 auto;
+    max-width: var(--page-w); margin: 0 auto;
+    display: flex; align-items: center; gap: 18px;
+    padding: 0 20px; min-height: 56px;
   }
-  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .brand-mark {
-    width: 42px; height: 42px;
-    border-radius: 11px;
-    background: var(--gold);
-    color: var(--gold-ink);
+    width: 32px; height: 32px; border-radius: var(--radius);
+    background: var(--gold); border: none; padding: 0; flex: none;
     display: grid; place-items: center;
-    flex: none;
-    border: none; padding: 0;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .brand-mark:hover {
-    transform: translateY(-1px);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), 0 4px 12px rgba(0,0,0,0.28);
-  }
-  .brand-mark:active { transform: scale(0.93); }
-  .brand-mark:focus-visible { outline: 2px solid rgba(255,255,255,0.75); outline-offset: 2px; }
+  .brand-mark:hover { filter: brightness(1.08); }
+  .brand-mark:active { transform: scale(0.94); }
   .brand-mark:disabled { cursor: wait; }
-  .brand-mark svg { width: 24px; height: 24px; }
+  .brand-mark svg { width: 20px; height: 20px; }
   .brand-mark-shield { fill: var(--brand-shield); }
   .brand-mark-cut { fill: var(--brand-bolt); }
   .brand-mark.refreshing svg { animation: brandMarkSpin 0.85s linear infinite; }
-  @keyframes brandMarkSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .brand-title { font-size: 1.2rem; letter-spacing: 0.01em; }
-  .brand-sub { font-size: 0.78rem; color: rgba(253,250,255,0.75); margin-top: 1px; }
+  @keyframes brandMarkSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .brand-title { font-size: 0.95rem; font-weight: 600; line-height: 1.25; white-space: nowrap; }
+  .brand-sub { font-size: 0.76rem; color: var(--ink-muted); white-space: nowrap; }
 
-  .clock-badge {
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 999px;
-    padding: 7px 8px 7px 16px;
-    font-size: 0.83rem;
-  }
-  .clock-badge .time { font-family: "Kanit"; font-size: 0.95rem; }
-  .shift-pill {
-    background: var(--gold);
-    color: var(--gold-ink);
-    font-family: "Kanit";
-    font-weight: 600;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-  }
-
-  .tabbar {
-    max-width: 1180px;
-    margin: 0 auto;
-    display: flex;
-    gap: 4px;
-  }
+  .tabbar { display: flex; align-self: stretch; gap: 2px; margin-left: 14px; }
   .tabbar button {
-    background: transparent;
-    border: none;
-    color: rgba(253,250,255,0.75);
-    padding: 10px 18px 12px;
-    font-family: "Kanit";
-    font-size: 0.95rem;
-    font-weight: 500;
-    border-bottom: 3px solid transparent;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    background: none; border: none; color: var(--ink-secondary);
+    padding: 0 14px; font-size: 0.9rem; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
   }
-  .tabbar button[aria-selected="true"] {
-    color: #fff;
-    border-bottom-color: var(--gold);
-  }
-  .tabbar button:hover { color: #fff; }
+  .tabbar button svg { display: none; }
+  .tabbar button:hover { color: var(--ink); }
+  .tabbar button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
   .tabbar .count-chip {
-    background: rgba(255,255,255,0.16);
-    border-radius: 999px;
-    padding: 1px 8px;
-    font-size: 0.72rem;
+    font-size: 0.72rem; color: var(--ink-muted);
+    border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0 5px; line-height: 1.5;
   }
 
-  main { max-width: 1180px; margin: 0 auto; padding: 22px clamp(14px, 4vw, 32px) 60px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .clock-badge { display: flex; align-items: center; gap: 10px; }
+  .clock-badge .clock-text { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+  .clock-badge .time { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 500; letter-spacing: 0.02em; }
+  .clock-badge .date { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-muted); }
+  .shift-pill {
+    background: var(--gold); color: var(--gold-ink);
+    font-weight: 700; font-size: 0.8rem;
+    padding: 4px 9px; border-radius: var(--radius); white-space: nowrap;
+  }
+  .theme-toggle {
+    width: 32px; height: 32px; border-radius: var(--radius);
+    border: 1px solid var(--border-strong); background: transparent; color: var(--ink-secondary);
+    display: grid; place-items: center;
+  }
+  .theme-toggle:hover { color: var(--ink); background: var(--surface-2); }
+  .theme-toggle svg { width: 16px; height: 16px; }
+  .theme-toggle .icon-sun { display: none; }
+  :root[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+  :root[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+
+  @media (max-width: 860px) {
+    .header-row { flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px 0; }
+    .brand { flex: 1 1 0; }
+    .header-right { margin-left: 0; gap: 8px; }
+    .brand-sub { display: none; }
+    .brand-title { font-size: 0.84rem; white-space: normal; }
+    .clock-badge .date { display: none; }
+    .clock-badge .time { font-size: 1.05rem; }
+    .tabbar { order: 3; width: 100%; margin-left: 0; }
+    .tabbar button { flex: 1; justify-content: center; padding: 10px 6px; }
+  }
+
+  main { max-width: var(--page-w); margin: 0 auto; padding: 16px 20px 80px; }
+  @media (max-width: 860px) { main { padding: 12px 10px 90px; } }
   .view { display: none; }
   .view.active { display: block; }
 
   .banner {
     display: flex; align-items: center; gap: 10px;
-    background: var(--gold-soft); color: var(--gold-ink);
-    border: 1px solid var(--gold);
-    border-radius: var(--radius-md);
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    margin-bottom: 16px;
+    background: var(--gold-soft); color: var(--ink);
+    border: 1px solid var(--border); border-left: 3px solid var(--gold);
+    border-radius: var(--radius); padding: 9px 12px; font-size: 0.85rem; margin-bottom: 12px;
   }
   .banner.hidden { display: none; }
 
-  /* ============ Cards ============ */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+  /* ============ Panels ============ */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .card-pad { padding: 14px 18px 18px; }
+  @media (max-width: 860px) { .card-pad { padding: 12px 12px 14px; } }
+  .stack > * + * { margin-top: 12px; }
+  /* หัวข้อแผง: ตัวเล็ก ชิดซ้าย แบบป้ายบนตู้ควบคุม — คำอธิบายย่อยต่อท้ายบรรทัดเดียวกัน */
+  .section-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .section-title .dot { display: none; }
+  .section-title h2 { font-size: 0.9rem !important; font-weight: 600; color: var(--ink); }
+  .section-sub { color: var(--ink-muted); font-size: 0.78rem; margin: 2px 0 0; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .panel-head .section-sub { margin: 0; }
+
+  /* ============ Entry layout ============ */
+  .entry-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (min-width: 1100px) {
+    .entry-layout { grid-template-columns: minmax(0, 1fr) 400px; }
+    .entry-aside { position: sticky; top: 76px; }
   }
-  .card-pad { padding: 20px clamp(16px, 3vw, 26px); }
-  .section-title {
-    font-size: 1.02rem;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .section-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex: none; }
-  .section-sub { color: var(--ink-secondary); font-size: 0.82rem; margin-top: 3px; }
 
   /* ============ Form ============ */
-  .form-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
   @media (min-width: 640px) { .form-grid.two-col { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .form-grid.top-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1fr); } }
+  .form-block { margin-top: 14px; }
 
-  .field label {
-    display: block; font-size: 0.82rem; font-weight: 600;
-    color: var(--ink-secondary); margin-bottom: 6px;
+  .field label, .field .label {
+    display: block; font-size: 0.8rem; font-weight: 500;
+    color: var(--ink-secondary); margin-bottom: 5px;
   }
+  .field .hint { font-weight: 400; color: var(--ink-muted); }
   .field .req { color: var(--danger); }
   .field .field-row { display: flex; gap: 6px; }
-  .field input[type="text"], .field input[type="date"], .field select, .field textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    color: var(--ink);
+  .field input[type="text"], .field input[type="date"], .field select, .field textarea,
+  .filter-field select, .filter-field input, .add-row input, .add-row select {
+    width: 100%; min-height: 38px;
+    background: var(--field); color: var(--ink);
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    padding: 7px 10px;
   }
-  .field textarea { resize: vertical; min-height: 84px; }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-    outline: none;
+  .field input[type="text"], .field input[type="date"], .field select { height: 38px; }
+  .field textarea { resize: vertical; min-height: 76px; line-height: 1.5; }
+  .field input:focus, .field select:focus, .field textarea:focus,
+  .filter-field select:focus, .filter-field input:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); outline: none;
   }
+  .field input::placeholder, .field textarea::placeholder, .filter-field input::placeholder { color: var(--ink-muted); }
   .icon-btn {
-    background: var(--surface-2);
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    width: 40px; flex: none;
-    display: grid; place-items: center;
+    background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius);
+    width: 38px; flex: none; display: grid; place-items: center;
   }
-  .icon-btn:hover { background: var(--surface-3); }
-  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn svg { width: 16px; height: 16px; }
 
-  .shift-picker { display: flex; gap: 8px; flex-wrap: wrap; }
-  .voltage-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  /* ปุ่มตัวเลือก (กะ / ประเภทงาน / สถานะ) — ปุ่มแบน ชิดซ้าย มีไฟ LED บอกตัวที่เลือก */
+  .shift-picker, .jobtype-picker, .status-picker { display: grid; gap: 6px; }
+  .shift-picker { grid-template-columns: repeat(3, 1fr); }
+  .jobtype-picker { grid-template-columns: repeat(2, 1fr); }
+  .status-picker { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 720px) { .status-picker { grid-template-columns: repeat(4, 1fr); } }
+  .shift-opt, .jobtype-opt, .status-opt {
+    min-height: 38px; padding: 6px 10px;
+    background: var(--field); color: var(--ink-secondary);
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    display: flex; align-items: center; gap: 8px; text-align: left;
+    font-size: 0.86rem; font-weight: 500; line-height: 1.25;
+  }
+  .shift-opt:hover, .jobtype-opt:hover:not(:disabled), .status-opt:hover { border-color: var(--ink-muted); color: var(--ink); }
+  .shift-opt strong { font-weight: 600; color: inherit; }
+  .shift-opt span { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-muted); margin-left: auto; }
+  .shift-opt.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+  .shift-opt.selected span { color: var(--ink-secondary); }
+
+  .status-opt .led, .jobtype-opt .led { opacity: 0.35; box-shadow: none; }
+  .status-opt.selected, .jobtype-opt.selected {
+    color: var(--ink); background: var(--st-soft, var(--jt-soft));
+    border-color: var(--st, var(--jt)); box-shadow: inset 0 0 0 1px var(--st, var(--jt));
+  }
+  .status-opt.selected .led, .jobtype-opt.selected .led { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--led) 25%, transparent); }
+  .jobtype-opt { --led: var(--jt); }
+  .jobtype-opt .led { border-radius: 1px; }
+  .jobtype-opt:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .voltage-picker { display: flex; gap: 6px; flex-wrap: wrap; }
   .voltage-chip {
-    border: 1.5px solid var(--border-strong);
-    border-radius: 999px;
-    background: var(--surface);
-    padding: 6px 14px;
-    font-size: 0.82rem;
-    font-family: "Kanit";
+    font-family: var(--font-mono); font-size: 0.8rem;
+    min-height: 30px; padding: 3px 11px;
+    background: var(--field); color: var(--ink-secondary);
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
   }
-  .voltage-chip.selected { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-ink); font-weight: 600; }
+  .voltage-chip:hover { color: var(--ink); border-color: var(--ink-muted); }
+  .voltage-chip.selected { background: var(--gold-soft); border-color: var(--gold); color: var(--ink); box-shadow: inset 0 0 0 1px var(--gold); }
 
-  /* อัปเดต #24: เลือกวงจรได้หลายรายการพร้อมกันในสถานีเดียว — dropdown แบบ checkbox แทน select ตัวเดียวเดิม */
+  /* อัปเดต #24: dropdown แบบ checkbox เลือกวงจรได้หลายรายการ */
   .circuit-multiselect { position: relative; flex: 1; min-width: 0; }
   .circuit-ms-trigger {
-    width: 100%;
+    width: 100%; min-height: 38px;
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    background: var(--surface);
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    color: var(--ink);
-    font-family: "Noto Sans Thai";
-    font-size: 0.92rem;
-    text-align: left;
+    background: var(--field); color: var(--ink);
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    padding: 7px 10px; text-align: left; font-family: var(--font-mono); font-size: 0.86rem;
   }
   .circuit-ms-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .circuit-ms-trigger.placeholder { color: var(--ink-muted); }
+  .circuit-ms-trigger.placeholder { color: var(--ink-muted); font-family: var(--font-ui); }
   .circuit-ms-trigger:disabled { opacity: 0.6; cursor: not-allowed; }
-  .circuit-ms-trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); outline: none; }
-  .circuit-ms-trigger svg { width: 16px; height: 16px; flex: none; color: var(--ink-muted); transition: transform 0.15s; }
+  .circuit-ms-trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); outline: none; }
+  .circuit-ms-trigger svg { width: 15px; height: 15px; flex: none; color: var(--ink-muted); transition: transform 0.15s; }
   .circuit-multiselect.open .circuit-ms-trigger svg { transform: rotate(180deg); }
   .circuit-ms-panel {
-    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
-    background: var(--surface); border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-md);
-    max-height: 260px; overflow-y: auto; padding: 6px;
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius);
+    box-shadow: var(--shadow-pop); max-height: 280px; overflow-y: auto; padding: 4px;
   }
-  .circuit-ms-actions { display: flex; gap: 4px; padding: 2px 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .circuit-ms-actions { display: flex; gap: 2px; padding: 2px 2px 6px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
   .circuit-ms-actions button {
-    font-family: "Noto Sans Thai"; font-size: 0.74rem; font-weight: 600; color: var(--accent);
-    background: none; border: none; padding: 3px 6px; border-radius: 6px; cursor: pointer;
+    font-size: 0.76rem; font-weight: 500; color: var(--accent);
+    background: none; border: none; padding: 3px 8px; border-radius: var(--radius);
   }
   .circuit-ms-actions button:hover { background: var(--accent-soft); }
   .circuit-ms-option {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 8px; border-radius: 6px; font-size: 0.86rem; cursor: pointer;
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 0.84rem; cursor: pointer;
   }
   .circuit-ms-option:hover { background: var(--surface-2); }
-  .circuit-ms-option input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
-  .circuit-ms-option.selected { background: var(--accent-soft); font-weight: 600; }
+  .circuit-ms-option input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); flex: none; }
+  .circuit-ms-option.selected { background: var(--accent-soft); color: var(--ink); }
   .circuit-ms-empty { padding: 10px 8px; font-size: 0.82rem; color: var(--ink-muted); }
-  .shift-opt {
-    flex: 1 1 120px;
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    padding: 10px 12px;
-    text-align: left;
-    display: flex; flex-direction: column; gap: 2px;
-  }
-  .shift-opt strong { font-family: "Kanit"; font-size: 0.92rem; }
-  .shift-opt span { font-size: 0.74rem; color: var(--ink-muted); }
-  .shift-opt.selected {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-  }
-  .shift-opt.selected strong { color: var(--accent-strong); }
 
-  .status-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  @media (min-width: 560px) { .status-picker { grid-template-columns: repeat(4, 1fr); } }
-  .status-opt, .jobtype-opt {
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    padding: 12px 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    text-align: center;
-  }
-  .status-opt svg, .jobtype-opt svg { width: 20px; height: 20px; }
-  .status-opt span, .jobtype-opt span { font-size: 0.76rem; font-weight: 600; line-height: 1.25; }
-  .status-opt[data-status="moving_out"] svg { color: var(--status-moving-out); }
-  .status-opt[data-status="active"] svg { color: var(--status-active); }
-  .status-opt[data-status="moving_back"] svg { color: var(--status-moving-back); }
-  .status-opt[data-status="done"] svg { color: var(--status-done); }
-  .status-opt.selected[data-status="moving_out"] { border-color: var(--status-moving-out); background: var(--status-moving-out-soft); }
-  .status-opt.selected[data-status="active"] { border-color: var(--status-active); background: var(--status-active-soft); }
-  .status-opt.selected[data-status="moving_back"] { border-color: var(--status-moving-back); background: var(--status-moving-back-soft); }
-  .status-opt.selected[data-status="done"] { border-color: var(--status-done); background: var(--status-done-soft); }
-
-  /* ประเภทงาน (งาน SWITCHING / งานแก้ไขอุปกรณ์) — เลือกก่อนเลือกสถานะย่อย */
-  .jobtype-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .jobtype-opt[data-jobtype="switching"] svg { color: var(--jobtype-switching); }
-  .jobtype-opt[data-jobtype="repair"] svg { color: var(--jobtype-repair); }
-  .jobtype-opt.selected[data-jobtype="switching"] { border-color: var(--jobtype-switching); background: var(--jobtype-switching-soft); }
-  .jobtype-opt.selected[data-jobtype="repair"] { border-color: var(--jobtype-repair); background: var(--jobtype-repair-soft); }
-
-  .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+  /* ปุ่ม */
   .btn-primary {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 12px 22px;
-    font-family: "Kanit";
-    font-weight: 600;
-    font-size: 0.95rem;
-    box-shadow: var(--shadow-sm);
+    background: var(--accent-fill); color: #fff;
+    border: 1px solid transparent; border-radius: var(--radius);
+    min-height: 38px; padding: 6px 20px; font-weight: 600; font-size: 0.9rem;
   }
-  .btn-primary:hover { background: var(--accent-strong); }
-  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-primary:hover { background: var(--accent-fill-hover); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
   .btn-ghost {
-    background: transparent;
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    padding: 10px 16px;
-    font-size: 0.88rem;
-    color: var(--ink-secondary);
+    background: transparent; color: var(--ink-secondary);
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    min-height: 38px; padding: 6px 14px; font-size: 0.86rem;
   }
-  .btn-ghost:hover { background: var(--surface-2); }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--ink); }
+  .btn-primary.btn-danger { background: var(--danger); }
+  .btn-primary.btn-danger:hover { filter: brightness(1.08); background: var(--danger); }
+
+  .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .save-note { font-size: 0.8rem; color: var(--ink-muted); }
+  .kbd-hint { font-size: 0.74rem; color: var(--ink-muted); margin-left: auto; }
+  .kbd-hint kbd {
+    font-family: var(--font-mono); font-size: 0.72rem;
+    border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px;
+  }
+  /* มือถือ: ปุ่มบันทึกติดขอบล่างจอเสมอ ไม่ต้องเลื่อนหา */
+  @media (max-width: 860px) {
+    .kbd-hint { display: none; }
+    .form-actions {
+      position: sticky; bottom: 0; z-index: 5;
+      margin: 14px -12px -14px; padding: 10px 12px;
+      background: var(--surface); border-top: 1px solid var(--border);
+    }
+    .form-actions .btn-primary { flex: 1; min-height: 44px; }
+    .form-actions .btn-ghost { min-height: 44px; }
+    .form-actions .save-note { width: 100%; order: 3; }
+  }
 
-  /* status pill (shared) */
+  /* ป้ายสถานะ / ประเภทงาน (ใช้ร่วมกันทั้งตาราง รายการล่าสุด ป๊อปอัป) */
   .pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    border-radius: 999px; padding: 3px 10px; font-size: 0.75rem; font-weight: 600;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 0.8rem; font-weight: 500; white-space: nowrap; color: var(--st, var(--ink));
   }
-  .pill svg { width: 12px; height: 12px; }
-  .pill[data-status="moving_out"] { background: var(--status-moving-out-soft); color: var(--status-moving-out); }
-  .pill[data-status="active"] { background: var(--status-active-soft); color: var(--status-active); }
-  .pill[data-status="moving_back"] { background: var(--status-moving-back-soft); color: var(--status-moving-back); }
-  .pill[data-status="done"] { background: var(--status-done-soft); color: var(--status-done); }
-  .pill.jobtype-pill[data-jobtype="switching"] { background: var(--jobtype-switching-soft); color: var(--jobtype-switching); }
-  .pill.jobtype-pill[data-jobtype="repair"] { background: var(--jobtype-repair-soft); color: var(--jobtype-repair); }
+  .pill svg { display: none; }
+  .pill.jobtype-pill {
+    color: var(--jt); font-size: 0.74rem; font-weight: 600;
+    border: 1px solid currentColor; border-radius: 2px; padding: 0 6px; line-height: 1.6; gap: 0;
+  }
 
-  /* recent list */
-  .recent-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  /* รายการล่าสุด (ด้านข้างฟอร์ม) — คลิกเพื่อเปิดประวัติ/เปลี่ยนสถานะได้เลย */
+  .recent-list { list-style: none; margin: 0; padding: 0; }
   .recent-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border-radius: var(--radius-sm);
-    font-size: 0.84rem;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px;
+    padding: 9px 4px; border-top: 1px solid var(--border); font-size: 0.84rem;
   }
-  .recent-item .meta { color: var(--ink-muted); font-size: 0.76rem; }
+  .recent-item:first-child { border-top: none; }
+  .recent-item[data-id] { cursor: pointer; }
+  .recent-item[data-id]:hover { background: var(--surface-2); }
+  .recent-item .ri-code { font-family: var(--font-mono); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-item .ri-time { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-muted); text-align: right; white-space: nowrap; }
+  .recent-item .ri-detail { color: var(--ink-secondary); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent-item .meta { color: var(--ink-muted); font-size: 0.82rem; grid-column: 1 / -1; }
 
   /* ============ Overview ============ */
-  .filter-bar {
-    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
-    padding: 16px clamp(16px, 3vw, 26px);
-  }
-  .filter-field label { display: block; font-size: 0.74rem; color: var(--ink-muted); margin-bottom: 4px; }
-  .filter-field select, .filter-field input {
-    background: var(--surface); border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm); padding: 8px 10px; font-size: 0.85rem;
-  }
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 12px 14px; }
+  .filter-field label { display: block; font-size: 0.74rem; color: var(--ink-muted); margin-bottom: 3px; }
+  .filter-field select, .filter-field input { width: auto; min-height: 34px; padding: 5px 8px; font-size: 0.84rem; }
+  .filter-field input[type="date"] { font-family: var(--font-mono); }
   .filter-spacer { flex: 1; }
-
-  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 16px; }
-  @media (min-width: 720px) { .stat-grid { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); } }
-  .stat-tile {
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    background: var(--surface-2);
+  #clearFilterBtn { min-height: 34px; }
+  @media (max-width: 860px) {
+    .filter-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 12px; }
+    .filter-field select, .filter-field input { width: 100%; }
+    .filter-field[style] { grid-column: 1 / -1; }
+    .filter-spacer { display: none; }
+    #clearFilterBtn { grid-column: 1 / -1; }
   }
-  .stat-tile .stat-num { font-family: "Kanit"; font-size: 1.7rem; line-height: 1.1; }
-  .stat-tile .stat-label { font-size: 0.76rem; color: var(--ink-secondary); margin-top: 4px; display: flex; align-items: center; gap: 5px; }
-  .stat-tile .swatch { width: 9px; height: 9px; border-radius: 3px; flex: none; }
-  .stat-tile.total { background: var(--accent-soft); border-color: var(--accent); }
-  .stat-tile.total .stat-num { color: var(--accent-strong); }
 
-  .seg-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin-top: 14px; background: var(--surface-3); gap: 2px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-tile.total { grid-column: 1 / -1; }
+  @media (min-width: 720px) { .stat-grid { grid-template-columns: repeat(5, 1fr); } .stat-tile.total { grid-column: auto; } }
+  .stat-tile {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 9px 12px 10px; display: flex; flex-direction: column-reverse; gap: 2px;
+  }
+  .stat-tile .stat-num { font-family: var(--font-mono); font-size: 1.75rem; font-weight: 500; line-height: 1.1; }
+  .stat-tile .stat-label { font-size: 0.78rem; color: var(--ink-secondary); display: flex; align-items: center; gap: 7px; }
+  .stat-tile .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .stat-tile.total { background: transparent; }
+  .stat-tile.total .stat-num { color: var(--ink); }
+  .seg-bar { display: flex; height: 6px; overflow: hidden; margin-top: 10px; background: var(--surface-3); gap: 2px; border-radius: 1px; }
   .seg-bar div { height: 100%; }
 
   /* timeline */
-  .timeline-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 4px; position: relative; }
+  .timeline-grid { display: grid; grid-template-columns: 1fr; gap: 6px; position: relative; }
   .timeline-col-head {
-    grid-row: 1;
-    font-family: "Kanit"; font-size: 0.88rem; font-weight: 600;
-    display: none;
-    align-items: center; justify-content: space-between;
-    padding: 6px 10px; margin-bottom: 8px;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    grid-row: 1; display: none;
+    align-items: center; justify-content: space-between; gap: 8px;
+    padding: 5px 10px; margin-bottom: 6px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 0.84rem; font-weight: 600;
   }
+  .timeline-col-head .time-range { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); font-weight: 400; }
+  /* กะปัจจุบันขึ้นเป็นสีทอง ให้รู้ทันทีว่าตอนนี้อยู่คอลัมน์ไหน */
+  .timeline-col-head.is-now { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+  .timeline-col-head.is-now::after { content: "ขณะนี้"; font-size: 0.68rem; font-weight: 700; color: var(--gold-ink); background: var(--gold); padding: 0 5px; border-radius: 2px; order: 1; margin-right: auto; }
+  .timeline-col-head.is-now .time-range { order: 2; color: var(--gold); }
   @media (min-width: 860px) {
-    .timeline-grid { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; align-items: start; gap: 10px 14px; }
+    .timeline-grid { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; align-items: start; gap: 6px 14px; }
     .timeline-col-head { display: flex; }
     .timeline-col-head[data-col="1"] { grid-column: 1; }
     .timeline-col-head[data-col="2"] { grid-column: 2; }
     .timeline-col-head[data-col="3"] { grid-column: 3; }
-    /* อัปเดต #29: การ์ด 1 ใบต่อ 1 แถวเสมอ เรียงตามเวลาบันทึกไล่ลงมาต่อกัน (--row กำหนดจาก JS) — เดิมใช้ grid-auto-flow: dense
-       ทำให้การ์ดที่อยู่คนละกะถูกดันขึ้นไปวางเคียงข้างการ์ดที่บันทึกก่อนหน้า ลำดับเวลาเลยกระโดดไปมาอ่านยาก */
+    /* อัปเดต #29: การ์ด 1 ใบต่อ 1 แถว เรียงตามเวลาบันทึก (--row กำหนดจาก JS) */
     .shift-card { grid-column: var(--col-start, auto) / span var(--col-span, 1); grid-row: var(--row, auto); }
-    /* อัปเดต #23: เส้นแบ่งแนวตั้งระหว่างกะ 1/2/3 พาดยาวตลอดทั้งคอลัมน์ (ทั้งหัวข้อและแถวการ์ด) ให้เห็นขอบเขตของแต่ละกะชัดเจนขึ้น
-       ตำแหน่งคำนวณจากกึ่งกลางช่องว่างระหว่างคอลัมน์ (column-gap 14px) ของกริด 3 คอลัมน์เท่ากัน — ไม่พึ่ง element เสริมใดๆ */
+    /* อัปเดต #23: เส้นแบ่งแนวตั้งระหว่างกะ */
     .timeline-grid:not(.stacked-days)::before,
     .timeline-grid:not(.stacked-days)::after {
       content: ""; position: absolute; top: 0; bottom: 0; width: 1px;
-      background: var(--border-strong); pointer-events: none;
+      background: var(--border); pointer-events: none;
     }
     .timeline-grid:not(.stacked-days)::before { left: calc(33.333% - 2.33px); }
     .timeline-grid:not(.stacked-days)::after { left: calc(66.667% + 2.33px); }
   }
-  .timeline-col-head .time-range { font-size: 0.72rem; color: var(--ink-muted); font-weight: 400; }
-  .timeline-track { position: relative; padding-left: 20px; display: flex; flex-direction: column; gap: 14px; min-height: 40px; }
-  .timeline-track::before {
-    content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--border-strong);
-  }
-  .timeline-node { position: relative; }
-  .timeline-node::before {
-    content: ""; position: absolute; left: -19px; top: 3px; width: 10px; height: 10px; border-radius: 50%;
-    border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--border-strong);
-  }
-  .timeline-node[data-status="moving_out"]::before { background: var(--status-moving-out); box-shadow: 0 0 0 1.5px var(--status-moving-out); }
-  .timeline-node[data-status="active"]::before { background: var(--status-active); box-shadow: 0 0 0 1.5px var(--status-active); }
-  .timeline-node[data-status="moving_back"]::before { background: var(--status-moving-back); box-shadow: 0 0 0 1.5px var(--status-moving-back); }
-  .timeline-node[data-status="done"]::before { background: var(--status-done); box-shadow: 0 0 0 1.5px var(--status-done); }
-  .timeline-time { font-size: 0.72rem; color: var(--ink-muted); font-family: "Kanit"; }
-  .timeline-title { font-size: 0.86rem; font-weight: 600; margin: 2px 0 3px; }
-  .timeline-detail { font-size: 0.78rem; color: var(--ink-secondary); }
-  .timeline-empty { color: var(--ink-muted); font-size: 0.82rem; padding: 6px 0; }
-  .timeline-grid.stacked-days { grid-template-columns: 1fr; gap: 22px; }
-  /* อัปเดต #30: ไทม์ไลน์ยาวเกินไปหลังเรียงการ์ด 1 ใบต่อแถว (#29) — จำกัดความสูงแล้วเลื่อนดูด้วยสกรอลเม้าส์แทน (เฉพาะจอคอม
-     บนมือถือการ์ดเรียงเป็นแถวเดียวอยู่แล้ว ใช้การเลื่อนหน้าเว็บปกติดีกว่ากล่องสกรอลซ้อน) หัวข้อ กะ 1/2/3 ย้ายออกมาไว้
-     นอกกล่องสกรอล (#timelineHead) จึงยังเห็นอยู่ตลอดเวลาที่เลื่อนดูการ์ดด้านล่าง */
+  .timeline-empty { color: var(--ink-muted); font-size: 0.84rem; padding: 14px 2px; }
+  .timeline-grid.stacked-days { grid-template-columns: 1fr; gap: 18px; }
+  /* อัปเดต #30: จำกัดความสูงไทม์ไลน์ เลื่อนดูด้วยสกรอลเม้าส์ (จอคอม) หัวข้อกะอยู่นอกกล่องสกรอล */
   .timeline-head { display: none; }
   @media (min-width: 860px) {
-    /* scrollbar-gutter: stable ทั้งสองกล่อง = เว้นที่ความกว้างเท่าแถบสกรอลเท่ากัน คอลัมน์หัวข้อกะจึงตรงกับคอลัมน์การ์ดพอดี */
-    .timeline-head:not(.hidden) { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 14px; margin-top: 4px; overflow-y: hidden; scrollbar-gutter: stable; }
+    .timeline-head:not(.hidden) { display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 14px; overflow-y: hidden; scrollbar-gutter: stable; }
     .timeline-head .timeline-col-head { grid-row: auto; }
     .timeline-scroll { max-height: 640px; overflow-y: auto; scrollbar-gutter: stable; }
   }
-  .timeline-day-group + .timeline-day-group { padding-top: 18px; border-top: 1px dashed var(--border); }
-  .timeline-day-heading {
-    font-family: "Kanit"; font-weight: 600; font-size: 0.9rem; color: var(--ink);
-    margin-bottom: 10px;
-  }
+  .timeline-day-group + .timeline-day-group { padding-top: 14px; border-top: 1px dashed var(--border-strong); }
+  .timeline-day-heading { font-family: var(--font-mono); font-weight: 600; font-size: 0.86rem; margin-bottom: 8px; color: var(--ink-secondary); }
 
-  /* ไทม์ไลน์ตามกะ: การ์ดบล็อกสีพาสเทลตามสถานะ — การ์ดที่ยังไม่ "ย้ายโหลดคืนแล้วเสร็จ" จะลากขยายคาบเกี่ยวหลายกะได้ (ดู --col-start/--col-span) */
+  /* การ์ดไทม์ไลน์ — พื้นสีอ่อนตามสถานะ + แถบซ้ายสีสถานะ */
   .shift-card {
-    border-radius: var(--radius-md);
-    padding: 10px 11px;
-    cursor: pointer;
-    display: flex; flex-direction: column; gap: 3px;
-    border-left: 3px solid transparent;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    background: var(--st-soft, var(--surface-2));
+    border: 1px solid transparent; border-left: 3px solid var(--st, var(--border-strong));
+    border-radius: var(--radius);
+    padding: 7px 10px 8px; cursor: pointer;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: baseline;
   }
-  .shift-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  /* รายการค้างจากวันก่อนหน้าที่ยังไม่เสร็จ ยังคงแสดงในไทม์ไลน์ "วันนี้" ต่อไป — ใช้เส้นประด้านซ้ายแยกให้เห็นชัดว่าไม่ใช่รายการของวันนี้ */
+  .shift-card:hover { border-color: var(--st); border-left-color: var(--st); }
   .shift-card.shift-card-carryover { border-left-style: dashed; }
-  .shift-card-top-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .shift-card-top-row { display: contents; }
   .shift-card-jobtype-chip {
-    font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+    grid-column: 1; grid-row: 1; justify-self: start;
+    font-size: 0.7rem; font-weight: 600; color: var(--jt);
+    border: 1px solid currentColor; border-radius: 2px; padding: 0 5px; line-height: 1.55; white-space: nowrap;
   }
-  .shift-card-jobtype-chip[data-jobtype="switching"] { background: var(--jobtype-switching-soft); color: var(--jobtype-switching); }
-  .shift-card-jobtype-chip[data-jobtype="repair"] { background: var(--jobtype-repair-soft); color: var(--jobtype-repair); }
-  .shift-card-shift-badge { font-size: 0.62rem; font-weight: 600; color: var(--ink-muted); white-space: nowrap; }
-  .shift-card-time { font-family: "Kanit"; font-size: 0.68rem; font-weight: 600; color: var(--ink-muted); }
-  .shift-card-title { font-size: 0.81rem; font-weight: 600; color: var(--ink); line-height: 1.25; }
+  .shift-card-shift-badge { grid-column: 2; grid-row: 1; font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); white-space: nowrap; }
+  .shift-card-carryover .shift-card-shift-badge { color: var(--gold); font-weight: 600; }
+  .shift-card-time { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-muted); margin-top: 3px; }
+  .shift-card-title { grid-column: 1 / -1; font-family: var(--font-mono); font-size: 0.88rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
   .shift-card-detail {
-    font-size: 0.72rem; color: var(--ink-secondary); line-height: 1.35;
+    grid-column: 1 / -1; font-size: 0.8rem; color: var(--ink-secondary); line-height: 1.45;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .shift-card-status-label { font-size: 0.67rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; }
-  .shift-card-status-label svg { width: 11px; height: 11px; flex: none; }
-  .shift-card[data-status="moving_out"] { background: var(--status-moving-out-soft); border-left-color: var(--status-moving-out); }
-  .shift-card[data-status="moving_out"] .shift-card-status-label { color: var(--status-moving-out); }
-  .shift-card[data-status="active"] { background: var(--status-active-soft); border-left-color: var(--status-active); }
-  .shift-card[data-status="active"] .shift-card-status-label { color: var(--status-active); }
-  .shift-card[data-status="moving_back"] { background: var(--status-moving-back-soft); border-left-color: var(--status-moving-back); }
-  .shift-card[data-status="moving_back"] .shift-card-status-label { color: var(--status-moving-back); }
-  .shift-card[data-status="done"] { background: var(--status-done-soft); border-left-color: var(--status-done); }
-  .shift-card[data-status="done"] .shift-card-status-label { color: var(--status-done); }
+  .shift-card-status-label { grid-column: 1 / -1; font-size: 0.78rem; font-weight: 600; color: var(--st); display: inline-flex; align-items: center; gap: 7px; margin-top: 3px; }
 
   /* table */
-  /* จำกัดความสูงไว้ที่ประมาณ 12 แถว — เกินกว่านั้นให้เลื่อนดูด้วยสกรอลเม้าส์แทนที่จะดันหน้ายาวลงเรื่อยๆ
-     (หัวตาราง thead th มี position: sticky; top: 0 อยู่แล้ว จึงยังติดอยู่ด้านบนตอนสกรอล) */
-  .table-wrap { overflow-x: auto; overflow-y: auto; max-height: 645px; margin-top: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); }
-  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 780px; }
+  /* อัปเดต #20: จำกัดความสูงประมาณ 12 แถว + หัวตารางติดบนสุดตอนสกรอล */
+  .table-wrap { overflow: auto; max-height: 645px; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
   thead th {
-    text-align: left; background: var(--surface-2); color: var(--ink-secondary);
-    font-weight: 600; padding: 10px 12px; position: sticky; top: 0;
-    border-bottom: 1px solid var(--border); white-space: nowrap;
+    text-align: left; background: var(--surface-2); color: var(--ink-muted);
+    font-weight: 500; font-size: 0.76rem; padding: 7px 10px; position: sticky; top: 0; z-index: 1;
+    border-bottom: 1px solid var(--border-strong); white-space: nowrap;
   }
   thead th button { background: none; border: none; padding: 0; font: inherit; color: inherit; display: flex; align-items: center; gap: 4px; }
-  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th button:hover { color: var(--ink); }
+  thead th button::after { content: "↕"; font-size: 0.7rem; opacity: 0.4; }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: var(--surface-2); }
-  /* อัปเดต #31: ขยายช่อง "รายละเอียด" ให้กว้างขึ้น (เดิมจำกัดไว้ 260px ทำให้ข้อความยาวตัดขึ้นบรรทัดใหม่หลายบรรทัด แถวสูงเกินไป
-     ขณะที่ช่องวงจรกลับเหลือที่ว่างเยอะ) — คอลัมน์อื่นทั้งหมดหดเหลือเท่าที่เนื้อหาต้องใช้ (width: 1%) ที่เหลือยกให้ช่องรายละเอียดทั้งหมด
-     ช่องวงจรแสดงวงจรละ 1 บรรทัด ไม่ตัดกลางชื่อวงจรตรงขีด (-) — จอแคบกว่าตารางจะเลื่อนซ้าย-ขวาแทนการบีบช่องรายละเอียด */
+  tbody tr:hover td { background: var(--surface-2); }
+  /* อัปเดต #31: ช่องรายละเอียดได้พื้นที่ที่เหลือทั้งหมด คอลัมน์อื่นหดเท่าเนื้อหา */
   .table-wrap table { min-width: 1000px; }
   .table-wrap th, .table-wrap td { width: 1%; }
   .table-wrap th:nth-child(1), .table-wrap td:nth-child(1),
@@ -652,98 +552,111 @@
   .table-wrap th:nth-child(3), .table-wrap td:nth-child(3),
   .table-wrap th:nth-child(6), .table-wrap td:nth-child(6),
   .table-wrap th:nth-child(7), .table-wrap td:nth-child(7) { white-space: nowrap; }
+  .table-wrap td:nth-child(1), .table-wrap td:nth-child(2), .table-wrap td:nth-child(3), .table-wrap td:nth-child(4) { font-family: var(--font-mono); font-size: 0.8rem; }
+  .table-wrap td:nth-child(1) .meta { font-family: var(--font-mono); }
   .table-wrap .circuit-name { white-space: nowrap; }
-  .table-wrap th:nth-child(5), .table-wrap td.cell-detail { width: auto; min-width: 260px; }
-  .table-wrap th, .table-wrap td { padding-left: 10px; padding-right: 10px; }
+  .table-wrap th:nth-child(5), .table-wrap td.cell-detail { width: auto; min-width: 260px; line-height: 1.5; }
   .table-wrap td:nth-child(8) { min-width: 70px; }
   .row-actions { display: flex; gap: 6px; }
-  .row-actions select { font-size: 0.78rem; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); }
-  .row-actions button { background: transparent; border: none; color: var(--ink-muted); padding: 4px; border-radius: 6px; }
-  .row-actions button:hover { background: var(--surface-3); color: var(--danger); }
-  .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-muted); font-size: 0.88rem; }
+  .row-actions button { background: transparent; border: none; color: var(--ink-muted); padding: 3px; border-radius: var(--radius); }
+  .row-actions button:hover { background: var(--danger-soft); color: var(--danger); }
+  .empty-state { text-align: center; padding: 32px 20px; color: var(--ink-muted); font-size: 0.86rem; }
 
-  /* modal */
+  /* ============ Modals ============ */
   .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(20, 10, 35, 0.5);
+    position: fixed; inset: 0; background: rgba(5, 8, 12, 0.62);
     display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
   }
+  :root[data-theme="light"] .modal-backdrop { background: rgba(15, 23, 42, 0.38); }
   .modal-backdrop.hidden { display: none; }
   .modal {
-    background: var(--surface); border-radius: var(--radius-lg); max-width: 420px; width: 100%;
-    box-shadow: var(--shadow-md); max-height: 85vh; display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+    max-width: 460px; width: 100%; box-shadow: var(--shadow-pop);
+    max-height: 88vh; display: flex; flex-direction: column;
   }
-  .modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .modal-body { padding: 16px 20px; overflow-y: auto; }
+  .modal-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-head h3 { font-size: 0.92rem !important; }
+  .modal-body { padding: 14px 16px 16px; overflow-y: auto; }
   .modal-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-  .modal-tabs button {
-    flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 7px; font-size: 0.8rem;
-  }
-  .modal-tabs button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); font-weight: 600; }
-  .manage-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
-  .manage-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface-2); border-radius: 8px; padding: 7px 10px; font-size: 0.83rem; }
-  .manage-list li .province { color: var(--ink-muted); font-size: 0.72rem; }
+  .modal-tabs button { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px; font-size: 0.82rem; }
+  .modal-tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--ink); box-shadow: inset 0 0 0 1px var(--accent); }
+  .manage-list { list-style: none; padding: 0; margin: 0 0 12px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .manage-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; font-size: 0.84rem; font-family: var(--font-mono); border-top: 1px solid var(--border); }
+  .manage-list li:first-child { border-top: none; }
+  .manage-list li .province { color: var(--ink-muted); font-size: 0.74rem; font-family: var(--font-ui); }
   .manage-list button.remove { background: none; border: none; color: var(--ink-muted); }
   .manage-list button.remove:hover { color: var(--danger); }
   .add-row { display: flex; gap: 6px; }
-  .add-row input { flex: 1; }
-  .close-btn { background: none; border: none; color: var(--ink-muted); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; }
-  .close-btn:hover { background: var(--surface-2); }
+  .add-row input { flex: 1; width: auto; }
+  .close-btn { background: none; border: none; color: var(--ink-muted); width: 30px; height: 30px; border-radius: var(--radius); display: grid; place-items: center; }
+  .close-btn:hover { background: var(--surface-2); color: var(--ink); }
 
   /* record log modal */
-  .record-log-summary { margin-bottom: 16px; }
-  .record-log-title { font-family: "Kanit"; font-size: 0.98rem; font-weight: 600; margin-bottom: 4px; }
-  .record-log-meta { font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
-  .record-log-detail { font-size: 0.83rem; color: var(--ink-secondary); margin-top: 8px; line-height: 1.5; }
+  .record-log-summary { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .record-log-title { font-family: var(--font-mono); font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+  .record-log-meta { font-size: 0.78rem; color: var(--ink-muted); display: flex; flex-wrap: wrap; gap: 2px 12px; }
   .record-log-note { font-size: 0.76rem; color: var(--ink-muted); margin-top: 12px; }
-  #recordLogTrack .timeline-title { font-size: 0.83rem; }
-  #recordLogTrack .timeline-detail { font-size: 0.74rem; }
-  .record-log-edit-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 16px; }
+  .record-log-edit-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0 16px; }
+  .record-log-edit-actions button { min-height: 34px; }
   .record-log-status-row {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    background: var(--surface-2); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px;
   }
-  .record-log-status-row label { font-size: 0.8rem; font-weight: 600; color: var(--ink-secondary); }
+  .record-log-status-row label { font-size: 0.8rem; font-weight: 500; color: var(--ink-secondary); }
   .status-change-select {
-    font-family: "Noto Sans Thai", sans-serif; font-size: 0.82rem; font-weight: 600;
-    padding: 6px 8px; border-radius: 7px; border: 1px solid var(--border-strong);
-    background: var(--surface); color: var(--ink); cursor: pointer;
+    font-size: 0.84rem; font-weight: 500; min-height: 34px;
+    padding: 4px 8px; border-radius: var(--radius); border: 1px solid var(--border-strong);
+    background: var(--field); color: var(--ink);
   }
   .status-change-select:disabled { opacity: 0.6; cursor: not-allowed; }
-  /* อัปเดต #22: ล็อกฟิลด์ประเภทงาน/รายละเอียดงานไว้อ่านอย่างเดียว จนกว่าจะกดปุ่ม "แก้ไข" */
-  .jobtype-opt:disabled { opacity: 0.55; cursor: not-allowed; }
   #recordLogDetailInput:read-only { background: var(--surface-2); color: var(--ink-secondary); cursor: default; }
 
-  /* minimal confirm modal */
-  .confirm-modal { max-width: 340px; padding: 26px 22px 20px; text-align: center; }
+  .timeline-track { position: relative; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; min-height: 40px; }
+  .timeline-track::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 1px; background: var(--border-strong); }
+  .timeline-node { position: relative; }
+  .timeline-node::before {
+    content: ""; position: absolute; left: -20px; top: 5px; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--led, var(--ink-muted)); box-shadow: 0 0 0 3px var(--surface);
+  }
+  .timeline-time { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-muted); }
+  .timeline-title { font-size: 0.86rem; font-weight: 500; margin-top: 1px; }
+
+  /* confirm modal */
+  .confirm-modal { max-width: 360px; padding: 20px 20px 16px; text-align: left; }
   .confirm-icon {
-    width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 50%;
+    width: 34px; height: 34px; margin: 0 0 12px; border-radius: var(--radius);
     display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
   }
-  .confirm-icon svg { width: 22px; height: 22px; }
+  .confirm-icon svg { width: 18px; height: 18px; }
   .confirm-icon.danger { background: var(--danger-soft); color: var(--danger); }
-  .confirm-title { font-family: "Kanit"; font-size: 1rem; font-weight: 600; margin: 0 0 6px; }
-  .confirm-message { font-size: 0.84rem; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 4px; }
+  .confirm-title { font-size: 0.98rem; font-weight: 600; margin: 0 0 6px; }
+  .confirm-message { font-size: 0.86rem; color: var(--ink-secondary); line-height: 1.55; margin: 0 0 4px; }
   .confirm-message.hidden { display: none; }
-  .confirm-status-change { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 12px 0 18px; }
-  .confirm-status-change svg { width: 15px; height: 15px; color: var(--ink-muted); flex: none; }
-  .confirm-status-change.hidden { display: none; }
-  .confirm-actions { display: flex; gap: 10px; margin-top: 6px; }
-  .confirm-actions button { flex: 1; justify-content: center; }
-  .btn-primary.btn-danger { background: var(--danger); }
-  .btn-primary.btn-danger:hover { background: #8a105f; }
-
-  .toast-stack { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 60; max-width: 320px; }
-  .toast {
-    background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: var(--radius-sm);
-    font-size: 0.82rem; box-shadow: var(--shadow-md);
+  .confirm-status-change {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px;
+    padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);
   }
-  .toast.error { background: var(--danger); color: #fff; }
-  .toast.success { background: var(--status-done); color: #fff; }
+  .confirm-status-change svg { width: 14px; height: 14px; color: var(--ink-muted); flex: none; transform: rotate(-90deg); }
+  .confirm-status-change.hidden { display: none; }
+  .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+  .toast-stack { position: fixed; bottom: 18px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 60; max-width: 340px; }
+  @media (max-width: 860px) { .toast-stack { bottom: 78px; left: 12px; right: 12px; max-width: none; } }
+  .toast {
+    background: var(--surface-3); color: var(--ink);
+    border: 1px solid var(--border-strong); border-left: 3px solid var(--accent);
+    padding: 9px 12px; border-radius: var(--radius); font-size: 0.85rem; box-shadow: var(--shadow-pop);
+  }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.success { border-left-color: var(--status-done); }
 
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
   .hidden { display: none !important; }
 </style>
+<script>
+  /* อัปเดต #33: ตั้งธีมก่อนหน้าเว็บแสดงผล (กันจอกะพริบ) — ค่าเริ่มต้นมืด, จำค่าที่เลือกไว้ในเครื่องนี้ */
+  try { if (localStorage.getItem("shiftlog_theme") === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+</script>
 
 <div class="app-header">
   <div class="header-row">
@@ -759,22 +672,26 @@
         <div class="brand-sub">แผนกควบคุมระบบไฟฟ้า กฟน.3</div>
       </div>
     </div>
-    <div class="clock-badge">
-      <span class="time tabular" id="clockTime">--:--:--</span>
-      <span class="shift-pill" id="clockShift">กะ -</span>
+    <nav class="tabbar" role="tablist" aria-label="แท็บหลัก">
+      <button role="tab" id="tabBtnEntry" aria-selected="true" aria-controls="viewEntry">กรอกข้อมูลกะ</button>
+      <button role="tab" id="tabBtnOverview" aria-selected="false" aria-controls="viewOverview">
+        ภาพรวม <span class="count-chip tabular" id="overviewCountChip">0</span>
+      </button>
+    </nav>
+    <div class="header-right">
+      <div class="clock-badge">
+        <div class="clock-text">
+          <span class="time tabular" id="clockTime">--:--:--</span>
+          <span class="date" id="clockDate"></span>
+        </div>
+        <span class="shift-pill" id="clockShift">กะ -</span>
+      </div>
+      <button type="button" class="theme-toggle" id="themeToggle" title="สลับโหมดสว่าง/มืด" aria-label="สลับโหมดสว่าง/มืด">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
   </div>
-  <nav class="tabbar" role="tablist" aria-label="แท็บหลัก">
-    <button role="tab" id="tabBtnEntry" aria-selected="true" aria-controls="viewEntry">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      กรอกข้อมูลกะ
-    </button>
-    <button role="tab" id="tabBtnOverview" aria-selected="false" aria-controls="viewOverview">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      ภาพรวม
-      <span class="count-chip tabular" id="overviewCountChip">0</span>
-    </button>
-  </nav>
 </div>
 
 <main>
@@ -782,85 +699,91 @@
 
   <!-- ================= TAB 1: ENTRY ================= -->
   <section class="view active" id="viewEntry" role="tabpanel" aria-labelledby="tabBtnEntry">
-    <div class="card card-pad">
-      <div class="section-title"><span class="dot"></span><h2>บันทึกข้อมูลการปฏิบัติงาน</h2></div>
-      <p class="section-sub">กรอกข้อมูลกะที่ปฏิบัติงาน วงจร สถานี และสถานะปัจจุบัน — ข้อมูลจะแสดงในแท็บภาพรวมให้ทุกคนเห็นทันที</p>
-
-      <form id="entryForm">
-        <div class="field" style="margin-top:18px;">
-          <label>กะ <span class="req">*</span></label>
-          <div class="shift-picker" id="shiftPicker" role="radiogroup"></div>
+    <div class="entry-layout">
+      <div class="card card-pad">
+        <div class="panel-head">
+          <div class="section-title"><h2>บันทึกข้อมูลการปฏิบัติงาน</h2></div>
         </div>
 
-        <div class="form-grid two-col" style="margin-top:16px;">
-          <div class="field">
-            <label for="fDate">วันที่ <span class="req">*</span></label>
-            <input type="date" id="fDate" required />
-          </div>
-          <div class="field">
-            <label for="fRecorder">ผู้บันทึก <span class="req">*</span></label>
-            <input type="text" id="fRecorder" placeholder="ชื่อ-นามสกุล หรือรหัสพนักงาน" required />
-          </div>
-        </div>
-
-        <div class="field" style="margin-top:16px;">
-          <label>ระดับแรงดัน <span style="font-weight:400;color:var(--ink-muted);">(ตัวกรองช่วยหาสถานี/วงจร เลือกได้หลายค่า ไม่บังคับ)</span></label>
-          <div class="voltage-picker" id="voltagePicker"></div>
-        </div>
-
-        <div class="form-grid two-col" style="margin-top:16px;">
-          <div class="field">
-            <label for="fStation">สถานี <span class="req">*</span></label>
-            <div class="field-row">
-              <select id="fStation" required></select>
-              <button type="button" class="icon-btn hidden" id="manageStationBtn" title="จัดการรายการสถานี" aria-label="จัดการรายการสถานี">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-              </button>
+        <form id="entryForm">
+          <div class="form-grid top-row">
+            <div class="field">
+              <span class="label">กะ <span class="req">*</span></span>
+              <div class="shift-picker" id="shiftPicker" role="radiogroup" aria-label="กะ"></div>
+            </div>
+            <div class="field">
+              <label for="fDate">วันที่ <span class="req">*</span></label>
+              <input type="date" id="fDate" class="tabular" required />
+            </div>
+            <div class="field">
+              <label for="fRecorder">ผู้บันทึก <span class="req">*</span></label>
+              <input type="text" id="fRecorder" placeholder="ชื่อ หรือรหัสพนักงาน" required />
             </div>
           </div>
-          <div class="field">
-            <label for="fCircuitTrigger">วงจร <span class="req">*</span> <span style="font-weight:400;color:var(--ink-muted);">(เลือกได้หลายวงจรพร้อมกัน)</span></label>
-            <div class="field-row">
-              <div class="circuit-multiselect" id="fCircuitMulti">
-                <button type="button" class="circuit-ms-trigger placeholder" id="fCircuitTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
-                  <span id="fCircuitTriggerText">เลือกสถานีก่อน</span>
-                  <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+
+          <div class="field form-block">
+            <span class="label">ระดับแรงดัน <span class="hint">— ช่วยกรองสถานี/วงจร ไม่ต้องเลือกก็ได้</span></span>
+            <div class="voltage-picker" id="voltagePicker"></div>
+          </div>
+
+          <div class="form-grid two-col form-block">
+            <div class="field">
+              <label for="fStation">สถานี <span class="req">*</span></label>
+              <div class="field-row">
+                <select id="fStation" required></select>
+                <button type="button" class="icon-btn hidden" id="manageStationBtn" title="จัดการรายการสถานี" aria-label="จัดการรายการสถานี">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
                 </button>
-                <div class="circuit-ms-panel hidden" id="fCircuitPanel" role="listbox" aria-multiselectable="true"></div>
               </div>
-              <button type="button" class="icon-btn hidden" id="manageCircuitBtn" title="จัดการรายการวงจร" aria-label="จัดการรายการวงจร">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-              </button>
+            </div>
+            <div class="field">
+              <label for="fCircuitTrigger">วงจร <span class="req">*</span> <span class="hint">— เลือกได้หลายวงจร</span></label>
+              <div class="field-row">
+                <div class="circuit-multiselect" id="fCircuitMulti">
+                  <button type="button" class="circuit-ms-trigger placeholder" id="fCircuitTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
+                    <span id="fCircuitTriggerText">เลือกสถานีก่อน</span>
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <div class="circuit-ms-panel hidden" id="fCircuitPanel" role="listbox" aria-multiselectable="true"></div>
+                </div>
+                <button type="button" class="icon-btn hidden" id="manageCircuitBtn" title="จัดการรายการวงจร" aria-label="จัดการรายการวงจร">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9c.5.4 1.1.75 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="field" style="margin-top:16px;">
-          <label for="fDetail">รายละเอียด <span class="req">*</span></label>
-          <textarea id="fDetail" placeholder="เช่น สาเหตุ การดำเนินการ หมายเหตุความปลอดภัย ฯลฯ" required></textarea>
-        </div>
+          <div class="field form-block">
+            <label for="fDetail">รายละเอียด <span class="req">*</span></label>
+            <textarea id="fDetail" placeholder="สาเหตุ / การดำเนินการ / หมายเหตุความปลอดภัย" required></textarea>
+          </div>
 
-        <div class="field" style="margin-top:16px;">
-          <label>ประเภทงาน <span class="req">*</span></label>
-          <div class="jobtype-picker" id="jobTypePicker" role="radiogroup"></div>
-        </div>
+          <div class="field form-block">
+            <span class="label">ประเภทงาน <span class="req">*</span></span>
+            <div class="jobtype-picker" id="jobTypePicker" role="radiogroup" aria-label="ประเภทงาน"></div>
+          </div>
 
-        <div class="field" style="margin-top:16px;">
-          <label>สถานะ <span class="req">*</span> <span style="font-weight:400;color:var(--ink-muted);">(ใช้ชุดเดียวกันทั้งงาน SWITCHING และงานแก้ไขอุปกรณ์)</span></label>
-          <div class="status-picker" id="statusPicker" role="radiogroup"></div>
-        </div>
+          <div class="field form-block">
+            <span class="label">สถานะ <span class="req">*</span></span>
+            <div class="status-picker" id="statusPicker" role="radiogroup" aria-label="สถานะ"></div>
+          </div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn-primary" id="submitBtn">บันทึกข้อมูล</button>
-          <button type="button" class="btn-ghost" id="resetFormBtn">ล้างฟอร์ม</button>
-          <span class="save-note" id="saveNote"></span>
-        </div>
-      </form>
-    </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="submitBtn">บันทึกข้อมูล</button>
+            <button type="button" class="btn-ghost" id="resetFormBtn">ล้างฟอร์ม</button>
+            <span class="save-note" id="saveNote"></span>
+            <span class="kbd-hint">กด <kbd>Ctrl</kbd> + <kbd>Enter</kbd> เพื่อบันทึก</span>
+          </div>
+        </form>
+      </div>
 
-    <div class="card card-pad" style="margin-top:16px;">
-      <div class="section-title"><span class="dot"></span><h2 style="font-size:1rem;">รายการที่บันทึกล่าสุด</h2></div>
-      <ul class="recent-list" id="recentList"></ul>
+      <aside class="card card-pad entry-aside">
+        <div class="panel-head">
+          <div class="section-title"><h2>รายการล่าสุด</h2></div>
+          <span class="section-sub">คลิกเพื่อดูประวัติ / เปลี่ยนสถานะ</span>
+        </div>
+        <ul class="recent-list" id="recentList"></ul>
+      </aside>
     </div>
   </section>
 
@@ -903,32 +826,38 @@
             <option value="done">ย้ายโหลดคืนแล้วเสร็จ</option>
           </select>
         </div>
-        <div class="filter-field" style="flex:1 1 180px;">
+        <div class="filter-field" style="flex:1 1 220px;">
           <label for="fltSearch">ค้นหา</label>
-          <input type="text" id="fltSearch" placeholder="สถานี, วงจร, รายละเอียด, ผู้บันทึก" style="width:100%;" />
+          <input type="text" id="fltSearch" placeholder="สถานี วงจร รายละเอียด ผู้บันทึก" style="width:100%;" />
         </div>
         <div class="filter-spacer"></div>
         <button type="button" class="btn-ghost" id="clearFilterBtn">ล้างตัวกรอง</button>
       </div>
     </div>
 
-    <div class="card card-pad" style="margin-top:16px;">
-      <div class="section-title"><span class="dot"></span><h2 style="font-size:1rem;">สรุปจำนวนตามสถานะ</h2></div>
-      <p class="section-sub" id="summarySub">ตามตัวกรองที่เลือก</p>
+    <div class="card card-pad" style="margin-top:12px;">
+      <div class="panel-head">
+        <div class="section-title"><h2>สรุปตามสถานะ</h2></div>
+        <span class="section-sub" id="summarySub">ตามตัวกรองที่เลือก</span>
+      </div>
       <div class="stat-grid" id="statGrid"></div>
       <div class="seg-bar" id="segBar"></div>
     </div>
 
-    <div class="card card-pad" style="margin-top:16px;">
-      <div class="section-title"><span class="dot"></span><h2 style="font-size:1rem;">ไทม์ไลน์ตามกะ</h2></div>
-      <p class="section-sub" id="timelineSub">เรียงตามเวลาบันทึกภายในแต่ละกะ</p>
+    <div class="card card-pad" style="margin-top:12px;">
+      <div class="panel-head">
+        <div class="section-title"><h2>ไทม์ไลน์ตามกะ</h2></div>
+        <span class="section-sub" id="timelineSub"></span>
+      </div>
       <div class="timeline-head hidden" id="timelineHead"></div>
       <div class="timeline-scroll" id="timelineScroll"><div class="timeline-grid" id="timelineGrid"></div></div>
     </div>
 
-    <div class="card card-pad" style="margin-top:16px;">
-      <div class="section-title"><span class="dot"></span><h2 style="font-size:1rem;">ตารางรายการทั้งหมด</h2></div>
-      <p class="section-sub" id="tableSub"></p>
+    <div class="card card-pad" style="margin-top:12px;">
+      <div class="panel-head">
+        <div class="section-title"><h2>ตารางรายการทั้งหมด</h2></div>
+        <span class="section-sub" id="tableSub"></span>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -956,7 +885,7 @@
 <div class="modal-backdrop hidden" id="manageModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="manageModalTitle">
     <div class="modal-head">
-      <h3 id="manageModalTitle" style="font-size:1rem;">จัดการรายการ</h3>
+      <h3 id="manageModalTitle">จัดการรายการ</h3>
       <button class="close-btn" id="closeManageModal" aria-label="ปิด">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -992,7 +921,7 @@
 <div class="modal-backdrop hidden" id="recordLogModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="recordLogModalTitle">
     <div class="modal-head">
-      <h3 id="recordLogModalTitle" style="font-size:1rem;">ประวัติของรายการ</h3>
+      <h3 id="recordLogModalTitle">ประวัติของรายการ</h3>
       <button class="close-btn" id="closeRecordLogModal" aria-label="ปิด">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -1012,13 +941,13 @@
       <div class="record-log-status-row" id="recordLogStatusRow"></div>
 
       <div class="record-log-edit-actions">
-        <button type="button" class="btn-ghost" id="recordLogEditBtn" style="padding:8px 16px;font-size:.82rem;">แก้ไข</button>
-        <button type="button" class="btn-primary" id="recordLogSaveEditBtn" style="padding:8px 16px;font-size:.82rem;">บันทึกการแก้ไข</button>
+        <button type="button" class="btn-ghost" id="recordLogEditBtn">แก้ไข</button>
+        <button type="button" class="btn-primary" id="recordLogSaveEditBtn">บันทึกการแก้ไข</button>
         <span class="save-note" id="recordLogEditNote"></span>
       </div>
 
       <div class="timeline-track" id="recordLogTrack"></div>
-      <div class="record-log-note hidden" id="recordLogNote">ไม่มีประวัติการเปลี่ยนสถานะโดยละเอียดของรายการนี้ (บันทึกไว้ก่อนเปิดใช้งานฟีเจอร์นี้) — แสดงเฉพาะสถานะปัจจุบัน</div>
+      <div class="record-log-note hidden" id="recordLogNote">รายการนี้บันทึกไว้ก่อนมีระบบเก็บประวัติ จึงแสดงได้แค่สถานะปัจจุบัน</div>
     </div>
   </div>
 </div>
@@ -1189,7 +1118,7 @@
   function statusPillHtml(key) {
     var s = STATUS_MAP[key];
     if (!s) return "";
-    return '<span class="pill" data-status="' + key + '">' + statusIconSvg(key, 12) + esc(s.label) + "</span>";
+    return '<span class="pill" data-status="' + key + '"><i class="led"></i>' + esc(s.label) + "</span>";
   }
   function jobTypeIconSvg(key, size) {
     var j = JOB_TYPE_MAP[key];
@@ -1199,7 +1128,7 @@
   function jobTypePillHtml(key) {
     var j = JOB_TYPE_MAP[key];
     if (!j) return "";
-    return '<span class="pill jobtype-pill" data-jobtype="' + key + '">' + jobTypeIconSvg(key, 12) + esc(j.label) + "</span>";
+    return '<span class="pill jobtype-pill" data-jobtype="' + key + '">' + esc(j.label) + "</span>";
   }
   /** ข้อมูลเก่า (ก่อนมีประเภทงาน 2 ระดับ) อาจไม่มี jobType หรือใช้สถานะเก่า "damaged"/"repaired" ที่ยกเลิกไปแล้ว
    *  แปลงให้เข้ากับโครงสร้างใหม่เสมอ: damaged -> งานแก้ไขอุปกรณ์/อยู่ระหว่างปฏิบัติงาน, repaired -> งานแก้ไขอุปกรณ์/เสร็จแล้ว */
@@ -1522,7 +1451,7 @@
     el.innerHTML = SHIFT_DEFS.map(function (s) {
       var sel = state.selectedShift === s.key;
       return '<button type="button" class="shift-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-shift="' + s.key + '">' +
-        "<strong>" + s.label + "</strong><span>" + s.range + "</span></button>";
+        "<strong>" + s.label + '</strong><span>' + pad2(s.startHour) + "–" + pad2(s.endHour) + "</span></button>";
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".shift-opt"), function (btn) {
       btn.addEventListener("click", function () {
@@ -1537,7 +1466,7 @@
     el.innerHTML = STATUS_DEFS.map(function (s) {
       var sel = state.selectedStatus === s.key;
       return '<button type="button" class="status-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-status="' + s.key + '">' +
-        '<svg viewBox="0 0 24 24" fill="none">' + s.icon + "</svg><span>" + esc(s.label) + "</span></button>";
+        '<i class="led"></i><span>' + esc(s.label) + "</span></button>";
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".status-opt"), function (btn) {
       btn.addEventListener("click", function () {
@@ -1552,7 +1481,7 @@
     el.innerHTML = JOB_TYPE_DEFS.map(function (j) {
       var sel = state.selectedJobType === j.key;
       return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '">' +
-        '<svg viewBox="0 0 24 24" fill="none">' + j.icon + "</svg><span>" + esc(j.label) + "</span></button>";
+        '<i class="led"></i><span>' + esc(j.label) + "</span></button>";
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".jobtype-opt"), function (btn) {
       btn.addEventListener("click", function () {
@@ -1733,6 +1662,8 @@
   function tickClock() {
     var d = new Date();
     $("clockTime").textContent = pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + ":" + pad2(d.getSeconds());
+    var dateEl = $("clockDate");
+    if (dateEl) dateEl.textContent = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."][d.getDay()] + " " + pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + "/" + d.getFullYear();
     var sk = currentShiftKey(d);
     var def = SHIFT_DEFS[sk - 1];
     $("clockShift").textContent = def.label;
@@ -1751,15 +1682,26 @@
   /* ---------------- recent list ---------------- */
   function renderRecentList() {
     var el = $("recentList");
-    var mine = state.records.slice().sort(function (a, b) { return (b.createdAt || "").localeCompare(a.createdAt || ""); }).slice(0, 5);
+    var mine = state.records.slice().sort(function (a, b) { return (b.createdAt || "").localeCompare(a.createdAt || ""); }).slice(0, 8);
     if (!mine.length) {
       el.innerHTML = '<li class="recent-item"><span class="meta">ยังไม่มีรายการที่บันทึก</span></li>';
       return;
     }
+    // อัปเดต #33: แถวกระชับ 2 บรรทัด (รหัส+สถานะ / รายละเอียด+เวลา) และคลิกเปิดป๊อปอัปประวัติได้เลยโดยไม่ต้องสลับแท็บ
     el.innerHTML = mine.map(function (r) {
-      return '<li class="recent-item"><span>' + esc(r.station) + " · " + esc(r.circuit) + " — " + esc(truncate(r.detail, 42)) +
-        '</span>' + statusPillHtml(r.status) + '</li>';
+      return '<li class="recent-item" data-id="' + esc(r.id) + '" title="ดูประวัติ / เปลี่ยนสถานะ">' +
+        '<span class="ri-code">' + esc(r.station) + " · " + esc(r.circuit) + "</span>" +
+        statusPillHtml(r.status) +
+        '<span class="ri-detail">' + esc(r.detail) + "</span>" +
+        '<span class="ri-time">' + fmtShortDateTime(r.createdAt) + "</span>" +
+        "</li>";
     }).join("");
+  }
+  /** "05/11 08:15" — วันที่/เดือน + เวลา แบบสั้นสำหรับรายการล่าสุด */
+  function fmtShortDateTime(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return pad2(d.getDate()) + "/" + pad2(d.getMonth() + 1) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
   }
   function truncate(str, n) {
     str = str || "";
@@ -1878,7 +1820,7 @@
           '<div class="shift-card-time tabular">วันที่บันทึก : ' + fmtDateTimeThai(r.createdAt) + "</div>" +
           '<div class="shift-card-title">' + esc(r.station) + " · " + esc(r.circuit) + "</div>" +
           (r.detail ? '<div class="shift-card-detail">' + esc(r.detail) + "</div>" : "") +
-          '<div class="shift-card-status-label">' + statusIconSvg(r.status, 11) + esc(statusLabel) + "</div>" +
+          '<div class="shift-card-status-label"><i class="led"></i>' + esc(statusLabel) + "</div>" +
           "</div>";
       }).join("");
       return headers + cards;
@@ -1890,7 +1832,10 @@
       $("timelineHead").innerHTML = shiftHeadersHtml();
       $("timelineHead").classList.remove("hidden");
       timelineGridEl.innerHTML = shiftColumnsHtml(today, true, true);
-      $("timelineSub").textContent = "วันที่ " + fmtDateThai(today) + " — เรียงตามเวลาบันทึกภายในแต่ละกะ คลิกการ์ดเพื่อดู/ปรับสถานะ";
+      // อัปเดต #33: หัวข้อกะปัจจุบันขึ้นสีทอง ให้รู้ทันทีว่าตอนนี้อยู่คอลัมน์ไหน
+      var nowHead = $("timelineHead").querySelector('[data-col="' + currentShiftKey() + '"]');
+      if (nowHead) nowHead.classList.add("is-now");
+      $("timelineSub").textContent = "วันที่ " + fmtDateThai(today) + " · คลิกการ์ดเพื่อดูประวัติ / เปลี่ยนสถานะ";
       return;
     }
 
@@ -1909,7 +1854,7 @@
     }).join("") : '<div class="timeline-empty">ไม่มีรายการในช่วงวันที่ที่เลือก</div>';
 
     var rangeLabel = (dateFrom ? fmtDateThai(dateFrom) : "เริ่มต้น") + " – " + (dateTo ? fmtDateThai(dateTo) : "ปัจจุบัน");
-    $("timelineSub").textContent = "ช่วงวันที่ " + rangeLabel + (dates.length ? " (" + dates.length + " วันที่มีข้อมูล)" : "") + " — คลิกการ์ดเพื่อดู/ปรับสถานะ";
+    $("timelineSub").textContent = "ช่วงวันที่ " + rangeLabel + (dates.length ? " (" + dates.length + " วันที่มีข้อมูล)" : "") + " · คลิกการ์ดเพื่อดูประวัติ / เปลี่ยนสถานะ";
   }
 
   function bindTimelineActions() {
@@ -1981,6 +1926,7 @@
     if (res.ok) {
       showToast("อัปเดตสถานะแล้ว", "success");
       renderOverview();
+      renderRecentList();
       if (onSuccess) onSuccess();
     } else {
       sel.value = prevStatus;
@@ -2037,7 +1983,7 @@
     el.innerHTML = JOB_TYPE_DEFS.map(function (j) {
       var sel = recordLogEditJobType === j.key;
       return '<button type="button" class="jobtype-opt' + (sel ? " selected" : "") + '" role="radio" aria-checked="' + sel + '" data-jobtype="' + j.key + '"' + (recordLogEditMode ? "" : " disabled") + '>' +
-        '<svg viewBox="0 0 24 24" fill="none">' + j.icon + "</svg><span>" + esc(j.label) + "</span></button>";
+        '<i class="led"></i><span>' + esc(j.label) + "</span></button>";
     }).join("");
     Array.prototype.forEach.call(el.querySelectorAll(".jobtype-opt"), function (btn) {
       btn.addEventListener("click", function () {
@@ -2310,6 +2256,25 @@
     $("tabBtnOverview").addEventListener("click", function () { switchView("overview"); });
 
     $("entryForm").addEventListener("submit", handleSubmit);
+    // อัปเดต #33: Ctrl+Enter (Mac: ⌘+Enter) บันทึกได้จากทุกช่องในฟอร์ม
+    $("entryForm").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if ($("entryForm").requestSubmit) $("entryForm").requestSubmit($("submitBtn")); else $("submitBtn").click();
+      }
+    });
+    // อัปเดต #33: คลิกรายการล่าสุดเพื่อเปิดป๊อปอัปประวัติ/เปลี่ยนสถานะ
+    $("recentList").addEventListener("click", function (e) {
+      var item = e.target.closest(".recent-item[data-id]");
+      if (item) openRecordLogModal(item.getAttribute("data-id"));
+    });
+    // อัปเดต #33: สลับโหมดสว่าง/มืด (ค่าเริ่มต้นมืด) จำค่าไว้ในเครื่องนี้
+    $("themeToggle").addEventListener("click", function () {
+      var light = document.documentElement.getAttribute("data-theme") !== "light";
+      if (light) document.documentElement.setAttribute("data-theme", "light");
+      else document.documentElement.removeAttribute("data-theme");
+      localPrefSet("shiftlog_theme", light ? "light" : "dark");
+    });
     $("resetFormBtn").addEventListener("click", resetForm);
     $("fStation").addEventListener("change", renderCircuitOptions);
 
