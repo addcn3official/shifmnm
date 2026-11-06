@@ -456,6 +456,11 @@
   .stat-tile .stat-label { font-size: 0.78rem; color: var(--ink-secondary); display: flex; align-items: center; gap: 7px; }
   .stat-tile .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .stat-tile.total { background: transparent; }
+  /* อัปเดต #34: ช่องสรุปกดได้ */
+  button.stat-tile { font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer; }
+  button.stat-tile:hover { border-color: var(--ink-muted); }
+  .stat-tile.active { border-color: var(--st, var(--accent)); box-shadow: inset 0 0 0 1px var(--st, var(--accent)); background: var(--st-soft, var(--accent-soft)); }
+  .stat-tile.active .stat-label { color: var(--ink); }
   .stat-tile.total .stat-num { color: var(--ink); }
   .seg-bar { display: flex; height: 6px; overflow: hidden; margin-top: 10px; background: var(--surface-3); gap: 2px; border-radius: 1px; }
   .seg-bar div { height: 100%; }
@@ -838,7 +843,7 @@
     <div class="card card-pad" style="margin-top:12px;">
       <div class="panel-head">
         <div class="section-title"><h2>สรุปตามสถานะ</h2></div>
-        <span class="section-sub" id="summarySub">ตามตัวกรองที่เลือก</span>
+        <span class="section-sub" id="summarySub">คลิกช่องเพื่อกรองตามสถานะ · คลิกซ้ำเพื่อยกเลิก</span>
       </div>
       <div class="stat-grid" id="statGrid"></div>
       <div class="seg-bar" id="segBar"></div>
@@ -1709,12 +1714,13 @@
   }
 
   /* ---------------- overview: stat tiles ---------------- */
-  function getFilteredRecords() {
+  /** ignoreStatus = true: ใช้ตัวกรองทุกตัวยกเว้น "สถานะ" (สำหรับนับตัวเลขในช่องสรุปตามสถานะ — อัปเดต #34) */
+  function getFilteredRecords(ignoreStatus) {
     var dateFrom = $("fltDateFrom").value;
     var dateTo = $("fltDateTo").value;
     var shift = $("fltShift").value;
     var jobType = $("fltJobType").value;
-    var status = $("fltStatus").value;
+    var status = ignoreStatus ? "all" : $("fltStatus").value;
     var q = ($("fltSearch").value || "").trim().toLowerCase();
     return state.records.filter(function (r) {
       if (dateFrom && r.date < dateFrom) return false;
@@ -1734,10 +1740,15 @@
     var counts = { moving_out: 0, active: 0, moving_back: 0, done: 0 };
     records.forEach(function (r) { if (counts.hasOwnProperty(r.status)) counts[r.status]++; });
     var total = records.length;
-    var tiles = '<div class="stat-tile total"><div class="stat-num tabular">' + total + '</div><div class="stat-label">รายการทั้งหมด</div></div>';
+    // อัปเดต #34: ช่องสรุปเป็นปุ่ม — คลิกเพื่อกรองไทม์ไลน์/ตารางตามสถานะนั้น (คลิกซ้ำหรือคลิก "ทั้งหมด" = ยกเลิก)
+    var current = $("fltStatus").value;
+    var tiles = '<button type="button" class="stat-tile total' + (current === "all" ? " active" : "") + '" data-filter="all" aria-pressed="' + (current === "all") + '">' +
+      '<div class="stat-num tabular">' + total + '</div><div class="stat-label">รายการทั้งหมด</div></button>';
     tiles += STATUS_DEFS.map(function (s) {
-      return '<div class="stat-tile"><div class="stat-num tabular">' + counts[s.key] + '</div>' +
-        '<div class="stat-label"><span class="swatch" style="background:var(--status-' + s.key.replace("_", "-") + ')"></span>' + esc(s.label) + "</div></div>";
+      var on = current === s.key;
+      return '<button type="button" class="stat-tile' + (on ? " active" : "") + '" data-filter="' + s.key + '" data-status="' + s.key + '" aria-pressed="' + on + '">' +
+        '<div class="stat-num tabular">' + counts[s.key] + '</div>' +
+        '<div class="stat-label"><span class="swatch" style="background:var(--status-' + s.key.replace("_", "-") + ')"></span>' + esc(s.label) + "</div></button>";
     }).join("");
     $("statGrid").innerHTML = tiles;
 
@@ -1964,7 +1975,8 @@
 
   function renderOverview() {
     var records = getFilteredRecords();
-    renderStatGrid(records);
+    // อัปเดต #34: ตัวเลขในช่องสรุปนับจากตัวกรองอื่นทั้งหมดยกเว้นสถานะ — คลิกเลือกสถานะแล้วช่องอื่นไม่กลายเป็น 0
+    renderStatGrid(getFilteredRecords(true));
     renderTimeline(records);
     renderTable(records);
     $("tableSub").textContent = records.length + " รายการ (จากทั้งหมด " + state.records.length + " รายการ)";
@@ -2353,6 +2365,15 @@
     });
 
     bindTableActions();
+
+    // อัปเดต #34: คลิกช่องสรุปตามสถานะ = ตั้งค่าตัวกรอง "สถานะ" (ช่อง dropdown เปลี่ยนตามด้วย)
+    $("statGrid").addEventListener("click", function (e) {
+      var tile = e.target.closest(".stat-tile[data-filter]");
+      if (!tile) return;
+      var key = tile.getAttribute("data-filter");
+      $("fltStatus").value = (key !== "all" && $("fltStatus").value === key) ? "all" : key;
+      renderOverview();
+    });
 
     $("brandRefreshBtn").addEventListener("click", manualRefresh);
   }
